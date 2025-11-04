@@ -2,8 +2,10 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 	"tada/internal/todo"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -35,12 +37,14 @@ func (m Mode) String() string {
 
 // Model represents the application state
 type Model struct {
-	todos    []todo.Item
-	cursor   int
-	mode     Mode
-	filename string
-	width    int
-	height   int
+	todos        []todo.Item
+	cursor       int
+	mode         Mode
+	filename     string
+	width        int
+	height       int
+	commandInput textinput.Model // Text input for command mode
+	insertInput  textinput.Model // Text input for insert mode
 }
 
 // NewModel creates a new TUI model
@@ -51,11 +55,29 @@ func NewModel(filename string) Model {
 		todos = []todo.Item{}
 	}
 
+	// Initialize command input
+	cmdInput := textinput.New()
+	cmdInput.Placeholder = "enter command..."
+	cmdInput.Prompt = ":"
+	cmdInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("51")).Bold(true)
+	cmdInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15"))
+	cmdInput.CharLimit = 200
+
+	// Initialize insert input
+	insInput := textinput.New()
+	insInput.Placeholder = "enter todo description..."
+	insInput.Prompt = "> "
+	insInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("green")).Bold(true)
+	insInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15"))
+	insInput.CharLimit = 500
+
 	return Model{
-		todos:    todos,
-		cursor:   0,
-		mode:     ModeNormal,
-		filename: filename,
+		todos:        todos,
+		cursor:       0,
+		mode:         ModeNormal,
+		filename:     filename,
+		commandInput: cmdInput,
+		insertInput:  insInput,
 	}
 }
 
@@ -66,6 +88,9 @@ func (m Model) Init() tea.Cmd {
 
 // Update handles messages and updates the model
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	var cmds []tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -76,7 +101,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleKeyPress(msg)
 	}
 
-	return m, nil
+	// Update textinput components for cursor blink and other messages
+	if m.mode == ModeCommand {
+		m.commandInput, cmd = m.commandInput.Update(msg)
+		cmds = append(cmds, cmd)
+	} else if m.mode == ModeInsert {
+		m.insertInput, cmd = m.insertInput.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
+	return m, tea.Batch(cmds...)
 }
 
 // handleKeyPress handles key presses based on current mode
@@ -105,8 +139,14 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case ":":
 		m.mode = ModeCommand
+		m.commandInput.Reset()
+		m.commandInput.Focus()
+		return m, textinput.Blink
 	case "i", "enter":
 		m.mode = ModeInsert
+		m.insertInput.Reset()
+		m.insertInput.Focus()
+		return m, textinput.Blink
 	case "v":
 		m.mode = ModeVisual
 	case "q":
@@ -124,14 +164,155 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// executeCommand parses and executes a command
+func (m Model) executeCommand() (Model, tea.Cmd) {
+	cmdLine := m.commandInput.Value()
+	parts := strings.Fields(cmdLine)
+	if len(parts) == 0 {
+		return m, nil
+	}
+
+	cmd := parts[0]
+	args := strings.Join(parts[1:], " ")
+
+	switch cmd {
+	case "add":
+		return m.cmdAdd(args)
+	case "edit":
+		return m.cmdEdit(args)
+	case "done":
+		return m.cmdDone(args)
+	case "delete", "del":
+		return m.cmdDelete(args)
+	}
+
+	return m, nil
+}
+
+// cmdAdd adds a new task
+func (m Model) cmdAdd(description string) (Model, tea.Cmd) {
+	if description == "" {
+		return m, nil
+	}
+
+	// Create new todo item
+	newItem := todo.Item{
+		Raw:         description,
+		Description: description,
+		Completed:   false,
+		Contexts:    []string{},
+		Projects:    []string{},
+	}
+
+	m.todos = append(m.todos, newItem)
+
+	// Save to file
+	if err := todo.SaveToFile(m.filename, m.todos); err != nil {
+		// TODO: Handle error (could add error message to model)
+		return m, nil
+	}
+
+	// Return to normal mode
+	m.mode = ModeNormal
+	m.commandInput.Blur()
+
+	// Move cursor to the new item
+	m.cursor = len(m.todos) - 1
+
+	return m, nil
+}
+
+// cmdEdit edits the current task
+func (m Model) cmdEdit(newDescription string) (Model, tea.Cmd) {
+	if len(m.todos) == 0 || newDescription == "" {
+		return m, nil
+	}
+
+	// Update the description
+	m.todos[m.cursor].Description = newDescription
+	m.todos[m.cursor].Raw = newDescription
+
+	// Save to file
+	if err := todo.SaveToFile(m.filename, m.todos); err != nil {
+		return m, nil
+	}
+
+	// Return to normal mode
+	m.mode = ModeNormal
+	m.commandInput.Blur()
+
+	return m, nil
+}
+
+// cmdDone marks the current task as complete
+func (m Model) cmdDone(args string) (Model, tea.Cmd) {
+	if len(m.todos) == 0 {
+		return m, nil
+	}
+
+	// Mark as completed
+	m.todos[m.cursor].Completed = true
+
+	// Update raw string to include 'x' marker
+	raw := m.todos[m.cursor].Raw
+	if !strings.HasPrefix(raw, "x ") {
+		m.todos[m.cursor].Raw = "x " + raw
+	}
+
+	// Save to file
+	if err := todo.SaveToFile(m.filename, m.todos); err != nil {
+		return m, nil
+	}
+
+	// Return to normal mode
+	m.mode = ModeNormal
+	m.commandInput.Blur()
+
+	return m, nil
+}
+
+// cmdDelete deletes the current task
+func (m Model) cmdDelete(args string) (Model, tea.Cmd) {
+	if len(m.todos) == 0 {
+		return m, nil
+	}
+
+	// Remove the item at cursor
+	m.todos = append(m.todos[:m.cursor], m.todos[m.cursor+1:]...)
+
+	// Adjust cursor if needed
+	if m.cursor >= len(m.todos) && m.cursor > 0 {
+		m.cursor--
+	}
+
+	// Save to file
+	if err := todo.SaveToFile(m.filename, m.todos); err != nil {
+		return m, nil
+	}
+
+	// Return to normal mode
+	m.mode = ModeNormal
+	m.commandInput.Blur()
+
+	return m, nil
+}
+
 // handleCommandMode handles key presses in command mode
 func (m Model) handleCommandMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		m.mode = ModeNormal
+		m.commandInput.Blur()
+		return m, nil
+	case "enter":
+		// Execute the command
+		return m.executeCommand()
 	}
 
-	return m, nil
+	// Let the textinput handle the key
+	var cmd tea.Cmd
+	m.commandInput, cmd = m.commandInput.Update(msg)
+	return m, cmd
 }
 
 // handleInsertMode handles key presses in insert mode
@@ -139,9 +320,37 @@ func (m Model) handleInsertMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		m.mode = ModeNormal
+		m.insertInput.Blur()
+		return m, nil
+	case "enter":
+		// Add the todo
+		description := m.insertInput.Value()
+		if description != "" {
+			newItem := todo.Item{
+				Raw:         description,
+				Description: description,
+				Completed:   false,
+				Contexts:    []string{},
+				Projects:    []string{},
+			}
+			m.todos = append(m.todos, newItem)
+
+			// Save to file
+			if err := todo.SaveToFile(m.filename, m.todos); err == nil {
+				m.cursor = len(m.todos) - 1
+			}
+		}
+
+		// Return to normal mode
+		m.mode = ModeNormal
+		m.insertInput.Blur()
+		return m, nil
 	}
 
-	return m, nil
+	// Let the textinput handle the key
+	var cmd tea.Cmd
+	m.insertInput, cmd = m.insertInput.Update(msg)
+	return m, cmd
 }
 
 // handleVisualMode handles key presses in visual mode
@@ -205,6 +414,13 @@ func (m Model) View() string {
 
 	s += modeStyle.Render(m.mode.String())
 
+	// Command/Insert input prompt
+	if m.mode == ModeCommand {
+		s += "\n" + m.commandInput.View()
+	} else if m.mode == ModeInsert {
+		s += "\n" + m.insertInput.View()
+	}
+
 	// Help text
 	helpStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("241")).
@@ -215,9 +431,9 @@ func (m Model) View() string {
 	case ModeNormal:
 		help = "i/enter: insert | v: visual | :: command | j/k: navigate | q: quit"
 	case ModeInsert:
-		help = "esc: back to normal mode"
+		help = "enter: add todo | esc: cancel"
 	case ModeCommand:
-		help = "esc: back to normal mode"
+		help = "add <task> | edit <new text> | done | delete/del | enter: execute | esc: cancel"
 	case ModeVisual:
 		help = "esc: back to normal mode"
 	}
