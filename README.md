@@ -2,7 +2,7 @@
 
 A vim-inspired terminal-based todo list manager using the todo.txt format.
 
-Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Bubbles](https://github.com/charmbracelet/bubbles) from Charm.
+Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), and [Lipgloss](https://github.com/charmbracelet/lipgloss) from Charm.
 
 ## Project Structure
 ```
@@ -30,6 +30,7 @@ tada/
 - ✅ Both `tada` and `td` commands work
 - ✅ Default storage at `~/.tada/todo.txt` (customizable with `-f` flag)
 - ✅ Built with Bubbles components for professional text input with cursor, selection, and clipboard support
+- ✅ **Beautiful styling** with Lipgloss - customizable color themes (config file support coming soon)
 
 **Vim-Inspired Modes:**
 - ✅ **Normal mode** (default) - Navigation with j/k or arrow keys, h/l to switch contexts
@@ -96,6 +97,18 @@ Todos are automatically grouped by their `@context` tags:
 - Todos without contexts go to "No Context"
 - Use `h/l` keys to switch between context lists
 - Use `j/k` keys to navigate within and across lists
+
+## Theming
+
+The app features a beautiful default color scheme with:
+- Bordered, styled header with app title
+- Distinct colors for active/inactive context lists
+- Highlighted cursor and selected items
+- Color-coded mode indicators (Normal: Blue, Insert: Green, Command: Orange, Visual: Purple)
+- Styled help text with visual separators
+- Professional text input components
+
+**Future Customization:** The theming system is architected to support loading custom colors from a config file. All colors are centralized in `internal/tui/theme.go`, making it easy to add configuration file support in the future.
 
 ## Building
 

@@ -109,6 +109,7 @@ type Model struct {
 	commandInput  textinput.Model // Text input for command mode
 	insertInput   textinput.Model // Text input for insert mode
 	editingIndex  int             // Index of the todo being edited in insert mode (-1 if adding new)
+	styles        Styles          // Theme and styling
 }
 
 // NewModel creates a new TUI model
@@ -119,20 +120,24 @@ func NewModel(filename string) Model {
 		todos = []todo.Item{}
 	}
 
+	// Initialize theme and styles
+	theme := DefaultTheme()
+	styles := NewStyles(theme)
+
 	// Initialize command input
 	cmdInput := textinput.New()
 	cmdInput.Placeholder = "enter command..."
 	cmdInput.Prompt = ":"
-	cmdInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("51")).Bold(true)
-	cmdInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15"))
+	cmdInput.PromptStyle = styles.CommandPrompt
+	cmdInput.TextStyle = styles.InputText
 	cmdInput.CharLimit = 200
 
 	// Initialize insert input
 	insInput := textinput.New()
 	insInput.Placeholder = "edit todo description..."
 	insInput.Prompt = "> "
-	insInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("green")).Bold(true)
-	insInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15"))
+	insInput.PromptStyle = styles.InsertPrompt
+	insInput.TextStyle = styles.InputText
 	insInput.CharLimit = 500
 
 	return Model{
@@ -145,6 +150,7 @@ func NewModel(filename string) Model {
 		commandInput: cmdInput,
 		insertInput:  insInput,
 		editingIndex: -1,
+		styles:       styles,
 	}
 }
 
@@ -536,42 +542,41 @@ func (m Model) View() string {
 	var s string
 
 	// Header
-	headerStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("cyan")).
-		Padding(0, 1)
-
-	s += headerStyle.Render("TADA - Todo List") + "\n\n"
+	s += m.styles.AppTitle.Render("✓ TADA") + "\n"
 
 	// Todo lists by context
 	if len(m.todos) == 0 {
-		s += "  No todos yet. Press 'i' to add one!\n"
+		emptyStyle := lipgloss.NewStyle().
+			Foreground(m.styles.Theme.Muted).
+			Italic(true).
+			Padding(2, 4)
+		s += emptyStyle.Render("No todos yet. Press ':add <task>' to create one!") + "\n"
 	} else {
 		// Render each context list
 		for listIdx, contextList := range m.contextLists {
 			// Context header
-			contextHeaderStyle := lipgloss.NewStyle().
-				Bold(true).
-				Foreground(lipgloss.Color("magenta")).
-				Underline(true)
-
+			headerStyle := m.styles.ContextHeader
 			if listIdx == m.listCursor {
-				contextHeaderStyle = contextHeaderStyle.Foreground(lipgloss.Color("cyan"))
+				headerStyle = m.styles.ContextHeaderActive
 			}
 
-			s += contextHeaderStyle.Render(fmt.Sprintf("@%s (%d)", contextList.Context, len(contextList.Todos))) + "\n"
+			contextTitle := fmt.Sprintf("@%s (%d)", contextList.Context, len(contextList.Todos))
+			s += headerStyle.Render(contextTitle) + "\n"
 
 			// Render todos in this context
 			for itemIdx, todoWithIdx := range contextList.Todos {
 				cursor := "  "
+				cursorStyle := m.styles.TodoCursor
 				if listIdx == m.listCursor && itemIdx == m.itemCursor {
-					cursor = "> "
+					cursor = cursorStyle.Render("▸ ")
 				}
 
 				// Style the item
-				itemStyle := lipgloss.NewStyle()
+				var itemStyle lipgloss.Style
 				if todoWithIdx.Item.Completed {
-					itemStyle = itemStyle.Foreground(lipgloss.Color("240")).Strikethrough(true)
+					itemStyle = m.styles.TodoCompleted
+				} else {
+					itemStyle = m.styles.TodoNormal
 				}
 
 				s += fmt.Sprintf("%s%s\n", cursor, itemStyle.Render(todoWithIdx.Item.Description))
@@ -582,22 +587,19 @@ func (m Model) View() string {
 
 	// Footer with mode indicator
 	s += "\n"
-	modeStyle := lipgloss.NewStyle().
-		Bold(true).
-		Padding(0, 1).
-		Background(lipgloss.Color("blue")).
-		Foreground(lipgloss.Color("white"))
-
+	var modeStyle lipgloss.Style
 	switch m.mode {
+	case ModeNormal:
+		modeStyle = m.styles.ModeNormal
 	case ModeInsert:
-		modeStyle = modeStyle.Background(lipgloss.Color("green"))
+		modeStyle = m.styles.ModeInsert
 	case ModeCommand:
-		modeStyle = modeStyle.Background(lipgloss.Color("yellow")).Foreground(lipgloss.Color("black"))
+		modeStyle = m.styles.ModeCommand
 	case ModeVisual:
-		modeStyle = modeStyle.Background(lipgloss.Color("magenta"))
+		modeStyle = m.styles.ModeVisual
 	}
 
-	s += modeStyle.Render(m.mode.String())
+	s += modeStyle.Render(" " + m.mode.String() + " ")
 
 	// Command/Insert input prompt
 	if m.mode == ModeCommand {
@@ -607,23 +609,19 @@ func (m Model) View() string {
 	}
 
 	// Help text
-	helpStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("241")).
-		Padding(1, 1)
-
 	help := ""
 	switch m.mode {
 	case ModeNormal:
-		help = "i/enter: edit todo | v: visual | :: command | j/k: up/down | h/l: prev/next list | q: quit"
+		help = "i/enter: edit todo • v: visual • :: command • j/k: up/down • h/l: prev/next list • q: quit"
 	case ModeInsert:
-		help = "enter: save changes | esc: cancel"
+		help = "enter: save changes • esc: cancel"
 	case ModeCommand:
-		help = "add <task> | edit <new text> | done | delete/del | enter: execute | esc: cancel"
+		help = "add <task> • edit <new text> • done • delete/del • enter: execute • esc: cancel"
 	case ModeVisual:
 		help = "esc: back to normal mode"
 	}
 
-	s += "\n" + helpStyle.Render(help)
+	s += "\n" + m.styles.HelpText.Render(help)
 
 	return s
 }
