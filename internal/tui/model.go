@@ -98,18 +98,22 @@ func groupTodosByContext(todos []todo.Item) []ContextList {
 
 // Model represents the application state
 type Model struct {
-	todos         []todo.Item
-	contextLists  []ContextList   // Grouped todos by context
-	listCursor    int             // Which context list is selected
-	itemCursor    int             // Which item in the current list is selected
-	mode          Mode
-	filename      string
-	width         int
-	height        int
-	commandInput  textinput.Model // Text input for command mode
-	insertInput   textinput.Model // Text input for insert mode
-	editingIndex  int             // Index of the todo being edited in insert mode (-1 if adding new)
-	styles        Styles          // Theme and styling
+	todos              []todo.Item
+	contextLists       []ContextList   // Grouped todos by context
+	listCursor         int             // Which context list is selected
+	itemCursor         int             // Which item in the current list is selected
+	mode               Mode
+	filename           string
+	width              int
+	height             int
+	commandInput       textinput.Model // Text input for command mode
+	insertInput        textinput.Model // Text input for insert mode
+	editingIndex       int             // Index of the todo being edited in insert mode (-1 if adding new)
+	styles             Styles          // Theme and styling
+	leaderKey          string          // Leader key (default: space)
+	waitingLeader      bool            // True when waiting for leader command
+	confirmingDelete   bool            // True when waiting for delete confirmation
+	deleteConfirmIndex int             // Index of todo to delete after confirmation
 }
 
 // NewModel creates a new TUI model
@@ -141,16 +145,20 @@ func NewModel(filename string) Model {
 	insInput.CharLimit = 500
 
 	return Model{
-		todos:        todos,
-		contextLists: groupTodosByContext(todos),
-		listCursor:   0,
-		itemCursor:   0,
-		mode:         ModeNormal,
-		filename:     filename,
-		commandInput: cmdInput,
-		insertInput:  insInput,
-		editingIndex: -1,
-		styles:       styles,
+		todos:              todos,
+		contextLists:       groupTodosByContext(todos),
+		listCursor:         0,
+		itemCursor:         0,
+		mode:               ModeNormal,
+		filename:           filename,
+		commandInput:       cmdInput,
+		insertInput:        insInput,
+		editingIndex:       -1,
+		styles:             styles,
+		leaderKey:          " ", // Space is the default leader key
+		waitingLeader:      false,
+		confirmingDelete:   false,
+		deleteConfirmIndex: -1,
 	}
 }
 
@@ -209,7 +217,48 @@ func (m Model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // handleNormalMode handles key presses in normal mode
 func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Check if we're waiting for delete confirmation
+	if m.confirmingDelete {
+		switch msg.String() {
+		case "d", "x", "enter":
+			// Confirm deletion
+			return m.confirmDelete()
+		case "esc":
+			// Cancel deletion
+			m.cancelDelete()
+			return m, nil
+		}
+		// Any other key cancels the confirmation
+		m.cancelDelete()
+		return m, nil
+	}
+
+	// Check if we're waiting for a leader command
+	if m.waitingLeader {
+		m.waitingLeader = false // Reset leader mode
+		switch msg.String() {
+		case "e":
+			// Edit current task
+			return m.leaderEdit()
+		case "a", "n":
+			// Add new task
+			return m.leaderAdd()
+		case "d", "x":
+			// Delete current task
+			return m.leaderDelete()
+		case "esc":
+			// Cancel leader mode
+			return m, nil
+		}
+		// Unknown leader command, just return
+		return m, nil
+	}
+
 	switch msg.String() {
+	case " ":
+		// Leader key pressed
+		m.waitingLeader = true
+		return m, nil
 	case ":":
 		m.mode = ModeCommand
 		m.commandInput.Reset()
@@ -279,6 +328,84 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// leaderEdit opens insert mode to edit the current task
+func (m Model) leaderEdit() (tea.Model, tea.Cmd) {
+	m.mode = ModeInsert
+
+	// Get current todo to edit
+	_, idx := m.getCurrentTodo()
+	if idx != -1 {
+		// Prefill with current todo description
+		m.editingIndex = idx
+		m.insertInput.SetValue(m.todos[idx].Raw)
+	} else {
+		// No todo selected, will add new one
+		m.editingIndex = -1
+		m.insertInput.Reset()
+	}
+
+	m.insertInput.Focus()
+	return m, textinput.Blink
+}
+
+// leaderAdd opens command mode to add a new task
+func (m Model) leaderAdd() (tea.Model, tea.Cmd) {
+	m.mode = ModeCommand
+	m.commandInput.Reset()
+	m.commandInput.SetValue("add ")
+	m.commandInput.Focus()
+	return m, textinput.Blink
+}
+
+// leaderDelete enters delete confirmation mode
+func (m Model) leaderDelete() (tea.Model, tea.Cmd) {
+	// Get current todo
+	_, idx := m.getCurrentTodo()
+	if idx == -1 {
+		return m, nil
+	}
+
+	// Enter confirmation mode
+	m.confirmingDelete = true
+	m.deleteConfirmIndex = idx
+
+	return m, nil
+}
+
+// confirmDelete performs the actual deletion
+func (m Model) confirmDelete() (tea.Model, tea.Cmd) {
+	if m.deleteConfirmIndex < 0 || m.deleteConfirmIndex >= len(m.todos) {
+		m.confirmingDelete = false
+		m.deleteConfirmIndex = -1
+		return m, nil
+	}
+
+	// Remove the item
+	m.todos = append(m.todos[:m.deleteConfirmIndex], m.todos[m.deleteConfirmIndex+1:]...)
+
+	// Save to file
+	if err := todo.SaveToFile(m.filename, m.todos); err != nil {
+		m.confirmingDelete = false
+		m.deleteConfirmIndex = -1
+		return m, nil
+	}
+
+	// Refresh context lists
+	m.refreshContextLists()
+
+	// Reset confirmation state
+	m.confirmingDelete = false
+	m.deleteConfirmIndex = -1
+
+	return m, nil
+}
+
+// cancelDelete cancels the delete confirmation
+func (m *Model) cancelDelete() {
+	m.confirmingDelete = false
+	m.deleteConfirmIndex = -1
 }
 
 // getCurrentTodo returns the currently selected todo item and its index in the todos slice
@@ -585,21 +712,61 @@ func (m Model) View() string {
 		}
 	}
 
+	// Delete confirmation prompt
+	if m.confirmingDelete && m.deleteConfirmIndex >= 0 && m.deleteConfirmIndex < len(m.todos) {
+		s += "\n"
+		confirmStyle := lipgloss.NewStyle().
+			Bold(true).
+			Foreground(m.styles.Theme.Warning).
+			Background(m.styles.Theme.Background).
+			Padding(0, 2).
+			Border(lipgloss.DoubleBorder()).
+			BorderForeground(m.styles.Theme.Danger)
+
+		taskPreview := m.todos[m.deleteConfirmIndex].Description
+		if len(taskPreview) > 50 {
+			taskPreview = taskPreview[:47] + "..."
+		}
+		confirmMsg := fmt.Sprintf("Delete '%s'?", taskPreview)
+		s += confirmStyle.Render(confirmMsg) + "\n"
+	}
+
 	// Footer with mode indicator
 	s += "\n"
 	var modeStyle lipgloss.Style
-	switch m.mode {
-	case ModeNormal:
-		modeStyle = m.styles.ModeNormal
-	case ModeInsert:
-		modeStyle = m.styles.ModeInsert
-	case ModeCommand:
-		modeStyle = m.styles.ModeCommand
-	case ModeVisual:
-		modeStyle = m.styles.ModeVisual
+	var modeText string
+
+	if m.confirmingDelete {
+		// Show special indicator when waiting for delete confirmation
+		modeStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("0")).
+			Background(m.styles.Theme.Danger).
+			Padding(0, 2)
+		modeText = "CONFIRM DELETE"
+	} else if m.waitingLeader {
+		// Show special indicator when waiting for leader command
+		modeStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("0")).
+			Background(m.styles.Theme.Accent).
+			Padding(0, 2)
+		modeText = "LEADER"
+	} else {
+		switch m.mode {
+		case ModeNormal:
+			modeStyle = m.styles.ModeNormal
+		case ModeInsert:
+			modeStyle = m.styles.ModeInsert
+		case ModeCommand:
+			modeStyle = m.styles.ModeCommand
+		case ModeVisual:
+			modeStyle = m.styles.ModeVisual
+		}
+		modeText = m.mode.String()
 	}
 
-	s += modeStyle.Render(" " + m.mode.String() + " ")
+	s += modeStyle.Render(" " + modeText + " ")
 
 	// Command/Insert input prompt
 	if m.mode == ModeCommand {
@@ -610,15 +777,24 @@ func (m Model) View() string {
 
 	// Help text
 	help := ""
-	switch m.mode {
-	case ModeNormal:
-		help = "i/enter: edit todo • v: visual • :: command • j/k: up/down • h/l: prev/next list • q: quit"
-	case ModeInsert:
-		help = "enter: save changes • esc: cancel"
-	case ModeCommand:
-		help = "add <task> • edit <new text> • done • delete/del • enter: execute • esc: cancel"
-	case ModeVisual:
-		help = "esc: back to normal mode"
+
+	// Special help when waiting for delete confirmation
+	if m.confirmingDelete {
+		help = "Confirm: d/x/enter=delete • esc=cancel"
+	} else if m.waitingLeader {
+		// Special help when waiting for leader command
+		help = "Leader: e=edit • a/n=add • d/x=delete • esc=cancel"
+	} else {
+		switch m.mode {
+		case ModeNormal:
+			help = "Space: leader key • i/enter: edit todo • :: command • j/k: up/down • h/l: prev/next list • q: quit"
+		case ModeInsert:
+			help = "enter: save changes • esc: cancel"
+		case ModeCommand:
+			help = "add <task> • edit <new text> • done • delete/del • enter: execute • esc: cancel"
+		case ModeVisual:
+			help = "esc: back to normal mode"
+		}
 	}
 
 	s += "\n" + m.styles.HelpText.Render(help)
