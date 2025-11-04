@@ -47,6 +47,29 @@ type ContextList struct {
 	Todos   []TodoWithIndex
 }
 
+// priorityValue returns a sort value for priority (lower is higher priority)
+func priorityValue(priority string) int {
+	if priority == "" {
+		return 1000 // Unprioritized items come last
+	}
+	// (A) = 0, (B) = 1, ..., (Z) = 25
+	return int(priority[0] - 'A')
+}
+
+// sortTodosByPriority sorts todos by priority (A is highest, unprioritized is lowest)
+func sortTodosByPriority(todos []TodoWithIndex) {
+	// Simple bubble sort by priority
+	for i := 0; i < len(todos); i++ {
+		for j := i + 1; j < len(todos); j++ {
+			iPriority := priorityValue(todos[i].Item.Priority)
+			jPriority := priorityValue(todos[j].Item.Priority)
+			if iPriority > jPriority {
+				todos[i], todos[j] = todos[j], todos[i]
+			}
+		}
+	}
+}
+
 // groupTodosByContext groups todos by their contexts
 func groupTodosByContext(todos []todo.Item) []ContextList {
 	contextMap := make(map[string][]TodoWithIndex)
@@ -65,6 +88,11 @@ func groupTodosByContext(todos []todo.Item) []ContextList {
 		}
 	}
 
+	// Sort todos within each context by priority
+	for _, todos := range contextMap {
+		sortTodosByPriority(todos)
+	}
+
 	// Convert map to sorted list
 	var lists []ContextList
 
@@ -80,7 +108,7 @@ func groupTodosByContext(todos []todo.Item) []ContextList {
 		contexts = append(contexts, context)
 	}
 
-	// Simple sort
+	// Simple sort for contexts (alphabetical)
 	for i := 0; i < len(contexts); i++ {
 		for j := i + 1; j < len(contexts); j++ {
 			if contexts[i] > contexts[j] {
@@ -664,6 +692,28 @@ func (m Model) handleVisualMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// getPriorityStyle returns the appropriate style for a priority
+func (m Model) getPriorityStyle(priority string) lipgloss.Style {
+	if priority == "" {
+		return lipgloss.NewStyle() // No style for unprioritized
+	}
+
+	switch priority {
+	case "A":
+		return m.styles.PriorityA
+	case "B":
+		return m.styles.PriorityB
+	case "C":
+		return m.styles.PriorityC
+	case "D", "E", "F":
+		return m.styles.PriorityHigh
+	case "G", "H", "I", "J", "K", "L", "M":
+		return m.styles.PriorityMedium
+	default: // N-Z
+		return m.styles.PriorityLow
+	}
+}
+
 // View renders the UI
 func (m Model) View() string {
 	var s string
@@ -698,6 +748,13 @@ func (m Model) View() string {
 					cursor = cursorStyle.Render("▸ ")
 				}
 
+				// Priority badge
+				priorityBadge := ""
+				if todoWithIdx.Item.Priority != "" {
+					priorityStyle := m.getPriorityStyle(todoWithIdx.Item.Priority)
+					priorityBadge = priorityStyle.Render(todoWithIdx.Item.Priority) + " "
+				}
+
 				// Style the item
 				var itemStyle lipgloss.Style
 				if todoWithIdx.Item.Completed {
@@ -706,7 +763,7 @@ func (m Model) View() string {
 					itemStyle = m.styles.TodoNormal
 				}
 
-				s += fmt.Sprintf("%s%s\n", cursor, itemStyle.Render(todoWithIdx.Item.Description))
+				s += fmt.Sprintf("%s%s%s\n", cursor, priorityBadge, itemStyle.Render(todoWithIdx.Item.Description))
 			}
 			s += "\n" // Space between lists
 		}

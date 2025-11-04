@@ -24,7 +24,8 @@ tada/
 **Core Functionality:**
 - ✅ Interactive TUI that takes over the terminal
 - ✅ Todo.txt format parser (reads/writes todo.txt files)
-- ✅ **Context-based organization** - todos automatically grouped by `@context` tags
+- ✅ **Context-based organization** - todos automatically grouped by `@context` tags (sorted alphabetically)
+- ✅ **Priority system** - todos sorted by priority (A-Z) with color-coded visual badges
 - ✅ Multiple context lists displayed simultaneously
 - ✅ Example todo list pre-populated
 - ✅ Both `tada` and `td` commands work
@@ -77,10 +78,11 @@ tada/
 3. Type your task description (e.g., `Buy groceries @Personal`)
 4. Press `Enter` to create the task
 
-**Adding a new task (Command Mode):**
+**Adding a prioritized task:**
 1. Press `:` to enter command mode
-2. Type `add Buy groceries @Personal`
-3. Press `Enter` to create the task
+2. Type `add (A) Fix critical bug @Work` (priority must be at the start)
+3. Press `Enter` to create a high-priority task with a red (A) badge
+4. The task will appear at the top of the @Work context list
 
 **Deleting a task (Leader Key):**
 1. Navigate to the task using `j/k` keys
@@ -116,8 +118,25 @@ Todos are automatically grouped by their `@context` tags:
 - Multiple contexts are supported: `Call dentist @Personal @Health`
 - Todos appear in all their associated context lists
 - Todos without contexts go to "No Context"
+- **Contexts are sorted alphabetically** for easy navigation
 - Use `h/l` keys to switch between context lists
 - Use `j/k` keys to navigate within and across lists
+
+## Priority System
+
+Todos support priority levels following the todo.txt format:
+- **Priority syntax:** `(A)` through `(Z)`, where `(A)` is highest priority
+- **Automatic sorting:** Within each context, todos are sorted by priority (A → Z, then unprioritized)
+- **Visual indicators:** Priority badges with color-coding:
+  - **(A)** - Red background (urgent)
+  - **(B)** - Orange background (high priority)
+  - **(C)** - Yellow background (medium-high priority)
+  - **(D-F)** - Orange (high)
+  - **(G-M)** - Blue (medium)
+  - **(N-Z)** - Gray (low)
+  - No priority indicator for unprioritized tasks
+
+**Example:** `:add (A) Fix critical bug @Work` creates a high-priority task
 
 ## Theming
 
@@ -125,6 +144,7 @@ The app features a beautiful default color scheme with:
 - Bordered, styled header with app title
 - Distinct colors for active/inactive context lists
 - Highlighted cursor and selected items
+- **Color-coded priority badges** (Red for A, Orange for B, Yellow for C, etc.)
 - Color-coded mode indicators (Normal: Blue, Insert: Green, Command: Orange, Visual: Purple)
 - Styled help text with visual separators
 - Professional text input components

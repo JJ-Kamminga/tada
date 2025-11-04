@@ -68,6 +68,14 @@ type Styles struct {
 	TodoCompleted  lipgloss.Style
 	TodoCursor     lipgloss.Style
 
+	// Priority badges
+	PriorityA      lipgloss.Style
+	PriorityB      lipgloss.Style
+	PriorityC      lipgloss.Style
+	PriorityHigh   lipgloss.Style // D-F
+	PriorityMedium lipgloss.Style // G-M
+	PriorityLow    lipgloss.Style // N-Z
+
 	// Mode indicator
 	ModeNormal     lipgloss.Style
 	ModeInsert     lipgloss.Style
@@ -146,6 +154,41 @@ func NewStyles(theme Theme) Styles {
 		TodoCursor: lipgloss.NewStyle().
 			Foreground(theme.Accent).
 			Bold(true),
+
+		// Priority badges - styled prominently
+		PriorityA: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("0")).
+			Background(lipgloss.Color("196")). // Bright red
+			Padding(0, 1),
+
+		PriorityB: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("0")).
+			Background(lipgloss.Color("214")). // Orange
+			Padding(0, 1),
+
+		PriorityC: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("0")).
+			Background(lipgloss.Color("226")). // Yellow
+			Padding(0, 1),
+
+		PriorityHigh: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("0")).
+			Background(lipgloss.Color("214")). // Orange
+			Padding(0, 1),
+
+		PriorityMedium: lipgloss.NewStyle().
+			Bold(true).
+			Foreground(lipgloss.Color("0")).
+			Background(lipgloss.Color("39")). // Blue
+			Padding(0, 1),
+
+		PriorityLow: lipgloss.NewStyle().
+			Foreground(theme.Muted).
+			Padding(0, 1),
 
 		// Mode indicators with colored backgrounds
 		ModeNormal: lipgloss.NewStyle().
