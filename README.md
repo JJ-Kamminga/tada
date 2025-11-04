@@ -24,21 +24,24 @@ tada/
 **Core Functionality:**
 - ✅ Interactive TUI that takes over the terminal
 - ✅ Todo.txt format parser (reads/writes todo.txt files)
+- ✅ **Context-based organization** - todos automatically grouped by `@context` tags
+- ✅ Multiple context lists displayed simultaneously
 - ✅ Example todo list pre-populated
 - ✅ Both `tada` and `td` commands work
 - ✅ Default storage at `~/.tada/todo.txt` (customizable with `-f` flag)
 - ✅ Built with Bubbles components for professional text input with cursor, selection, and clipboard support
 
 **Vim-Inspired Modes:**
-- ✅ **Normal mode** (default) - Navigation with j/k or arrow keys
+- ✅ **Normal mode** (default) - Navigation with j/k or arrow keys, h/l to switch contexts
 - ✅ **Command mode** (`:`) - Execute commands to manage todos with interactive text input
-- ✅ **Insert mode** (`i` or `Enter`) - Add new todos with interactive text input
+- ✅ **Insert mode** (`i` or `Enter`) - Edit the currently selected todo (prefilled with existing text)
 - ✅ **Visual mode** (`v`) - Ready for selection operations
 - ✅ Mode switching with `Esc` to return to normal mode
 
 **Keybindings (Normal mode):**
-- `j/k` or arrow keys: Navigate todos
-- `i` or `Enter`: Enter insert mode
+- `j/k` or up/down arrows: Navigate todos (up/down within and across lists)
+- `h/l` or left/right arrows: Switch between context lists
+- `i` or `Enter`: Edit the currently selected todo
 - `v`: Enter visual mode
 - `:`: Enter command mode
 - `q` or `Ctrl+C`: Quit
@@ -52,17 +55,19 @@ tada/
 
 ## Usage Examples
 
-**Adding a new task (Insert Mode):**
-1. Press `i` or `Enter` to enter insert mode
-2. Type your task description (e.g., `Buy groceries @Personal`)
-3. Press `Enter` to create the task
+**Editing a task (Insert Mode):**
+1. Navigate to the task using `j/k` keys
+2. Press `i` or `Enter` to enter insert mode
+3. The input will be prefilled with the current task description
+4. Edit the text as needed
+5. Press `Enter` to save changes
 
 **Adding a new task (Command Mode):**
 1. Press `:` to enter command mode
 2. Type `add Buy groceries @Personal`
 3. Press `Enter` to create the task
 
-**Editing an existing task:**
+**Editing via Command Mode:**
 1. Navigate to the task using `j/k` keys
 2. Press `:` to enter command mode
 3. Type `edit Buy groceries and milk @Personal`
@@ -81,6 +86,16 @@ tada/
 4. Press `Enter` to remove the task
 
 All changes are automatically saved to your todo.txt file.
+
+## Context-Based Organization
+
+Todos are automatically grouped by their `@context` tags:
+- Add contexts to your todos: `Buy milk @Personal` or `Review PR @Work`
+- Multiple contexts are supported: `Call dentist @Personal @Health`
+- Todos appear in all their associated context lists
+- Todos without contexts go to "No Context"
+- Use `h/l` keys to switch between context lists
+- Use `j/k` keys to navigate within and across lists
 
 ## Building
 

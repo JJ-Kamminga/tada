@@ -35,25 +35,32 @@ func (m Mode) String() string {
 	}
 }
 
+// TodoWithIndex wraps a todo item with its index in the main todos slice
+type TodoWithIndex struct {
+	Item  todo.Item
+	Index int
+}
+
 // ContextList represents a group of todos for a specific context
 type ContextList struct {
 	Context string
-	Todos   []todo.Item
+	Todos   []TodoWithIndex
 }
 
 // groupTodosByContext groups todos by their contexts
 func groupTodosByContext(todos []todo.Item) []ContextList {
-	contextMap := make(map[string][]todo.Item)
+	contextMap := make(map[string][]TodoWithIndex)
 
 	// Group todos by context
-	for _, item := range todos {
+	for i, item := range todos {
+		todoWithIdx := TodoWithIndex{Item: item, Index: i}
 		if len(item.Contexts) == 0 {
 			// No context, put in "No Context" list
-			contextMap["No Context"] = append(contextMap["No Context"], item)
+			contextMap["No Context"] = append(contextMap["No Context"], todoWithIdx)
 		} else {
 			// Add to each context it belongs to
 			for _, context := range item.Contexts {
-				contextMap[context] = append(contextMap[context], item)
+				contextMap[context] = append(contextMap[context], todoWithIdx)
 			}
 		}
 	}
@@ -101,6 +108,7 @@ type Model struct {
 	height        int
 	commandInput  textinput.Model // Text input for command mode
 	insertInput   textinput.Model // Text input for insert mode
+	editingIndex  int             // Index of the todo being edited in insert mode (-1 if adding new)
 }
 
 // NewModel creates a new TUI model
@@ -121,7 +129,7 @@ func NewModel(filename string) Model {
 
 	// Initialize insert input
 	insInput := textinput.New()
-	insInput.Placeholder = "enter todo description..."
+	insInput.Placeholder = "edit todo description..."
 	insInput.Prompt = "> "
 	insInput.PromptStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("green")).Bold(true)
 	insInput.TextStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15"))
@@ -136,6 +144,7 @@ func NewModel(filename string) Model {
 		filename:     filename,
 		commandInput: cmdInput,
 		insertInput:  insInput,
+		editingIndex: -1,
 	}
 }
 
@@ -202,7 +211,19 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, textinput.Blink
 	case "i", "enter":
 		m.mode = ModeInsert
-		m.insertInput.Reset()
+
+		// Get current todo to edit
+		_, idx := m.getCurrentTodo()
+		if idx != -1 {
+			// Prefill with current todo description
+			m.editingIndex = idx
+			m.insertInput.SetValue(m.todos[idx].Raw)
+		} else {
+			// No todo selected, will add new one
+			m.editingIndex = -1
+			m.insertInput.Reset()
+		}
+
 		m.insertInput.Focus()
 		return m, textinput.Blink
 	case "v":
@@ -265,16 +286,15 @@ func (m Model) getCurrentTodo() (*todo.Item, int) {
 		return nil, -1
 	}
 
-	selectedItem := currentList.Todos[m.itemCursor]
+	todoWithIdx := currentList.Todos[m.itemCursor]
+	idx := todoWithIdx.Index
 
-	// Find this item in the main todos slice
-	for i, item := range m.todos {
-		if item.Raw == selectedItem.Raw && item.Description == selectedItem.Description {
-			return &m.todos[i], i
-		}
+	// Validate index is still valid
+	if idx < 0 || idx >= len(m.todos) {
+		return nil, -1
 	}
 
-	return nil, -1
+	return &m.todos[idx], idx
 }
 
 // refreshContextLists rebuilds the context lists after todos change
@@ -466,14 +486,20 @@ func (m Model) handleInsertMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		m.mode = ModeNormal
 		m.insertInput.Blur()
+		m.editingIndex = -1
 		return m, nil
 	case "enter":
-		// Add the todo
 		description := m.insertInput.Value()
 		if description != "" {
-			// Parse the new todo to extract contexts
-			newItem := todo.Parse(description)
-			m.todos = append(m.todos, newItem)
+			if m.editingIndex >= 0 && m.editingIndex < len(m.todos) {
+				// Edit existing todo
+				updatedItem := todo.Parse(description)
+				m.todos[m.editingIndex] = updatedItem
+			} else {
+				// Add new todo
+				newItem := todo.Parse(description)
+				m.todos = append(m.todos, newItem)
+			}
 
 			// Save to file
 			if err := todo.SaveToFile(m.filename, m.todos); err == nil {
@@ -485,6 +511,7 @@ func (m Model) handleInsertMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Return to normal mode
 		m.mode = ModeNormal
 		m.insertInput.Blur()
+		m.editingIndex = -1
 		return m, nil
 	}
 
@@ -535,7 +562,7 @@ func (m Model) View() string {
 			s += contextHeaderStyle.Render(fmt.Sprintf("@%s (%d)", contextList.Context, len(contextList.Todos))) + "\n"
 
 			// Render todos in this context
-			for itemIdx, item := range contextList.Todos {
+			for itemIdx, todoWithIdx := range contextList.Todos {
 				cursor := "  "
 				if listIdx == m.listCursor && itemIdx == m.itemCursor {
 					cursor = "> "
@@ -543,11 +570,11 @@ func (m Model) View() string {
 
 				// Style the item
 				itemStyle := lipgloss.NewStyle()
-				if item.Completed {
+				if todoWithIdx.Item.Completed {
 					itemStyle = itemStyle.Foreground(lipgloss.Color("240")).Strikethrough(true)
 				}
 
-				s += fmt.Sprintf("%s%s\n", cursor, itemStyle.Render(item.Description))
+				s += fmt.Sprintf("%s%s\n", cursor, itemStyle.Render(todoWithIdx.Item.Description))
 			}
 			s += "\n" // Space between lists
 		}
@@ -587,9 +614,9 @@ func (m Model) View() string {
 	help := ""
 	switch m.mode {
 	case ModeNormal:
-		help = "i/enter: insert | v: visual | :: command | j/k: up/down | h/l: prev/next list | q: quit"
+		help = "i/enter: edit todo | v: visual | :: command | j/k: up/down | h/l: prev/next list | q: quit"
 	case ModeInsert:
-		help = "enter: add todo | esc: cancel"
+		help = "enter: save changes | esc: cancel"
 	case ModeCommand:
 		help = "add <task> | edit <new text> | done | delete/del | enter: execute | esc: cancel"
 	case ModeVisual:
