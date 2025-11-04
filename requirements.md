@@ -1,0 +1,19 @@
+
+- The main command is 'tada', but 'td' should work too.
+- The app should use the todotxt standard as specified on https://github.com/todotxt/todo.txt, so a single item should be structured like this: ` x 2025-09-25 2025-09-24 Review blog post @Work pri:A` where the x marks a completed item.
+- The app should store everything in a single txt file.
+- The app is primarily intended to run with the command 'tada', after which it takes over that terminal window and provides an interactive, app like experience.
+	- in the future, interaction through direct cli commands could be added - but not for now
+- The app has the following modes, which are inspired by vim
+	- normal mode: the default mode, to navigate, issue commands with leader based keymaps
+	- command mode: enter commands directly
+	- insert mode: add or modify a task
+	- visual mode: not sure whether we need this, but add anyway
+- modes can be changed to from normal mode
+	- command mode: `:`
+	- insert mode: `i` OR `<Enter>`
+	- visual mode: `v`
+	- Back to normal mode: `<Esc>`
+- Please populate the app with a default example todo list
+- When the app loads, the existing todo list should be displayed
+- For now, the modes should not do anything, this will come later.
