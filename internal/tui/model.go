@@ -35,16 +35,72 @@ func (m Mode) String() string {
 	}
 }
 
+// ContextList represents a group of todos for a specific context
+type ContextList struct {
+	Context string
+	Todos   []todo.Item
+}
+
+// groupTodosByContext groups todos by their contexts
+func groupTodosByContext(todos []todo.Item) []ContextList {
+	contextMap := make(map[string][]todo.Item)
+
+	// Group todos by context
+	for _, item := range todos {
+		if len(item.Contexts) == 0 {
+			// No context, put in "No Context" list
+			contextMap["No Context"] = append(contextMap["No Context"], item)
+		} else {
+			// Add to each context it belongs to
+			for _, context := range item.Contexts {
+				contextMap[context] = append(contextMap[context], item)
+			}
+		}
+	}
+
+	// Convert map to sorted list
+	var lists []ContextList
+
+	// Add "No Context" first if it exists
+	if items, ok := contextMap["No Context"]; ok {
+		lists = append(lists, ContextList{Context: "No Context", Todos: items})
+		delete(contextMap, "No Context")
+	}
+
+	// Add other contexts in alphabetical order
+	contexts := make([]string, 0, len(contextMap))
+	for context := range contextMap {
+		contexts = append(contexts, context)
+	}
+
+	// Simple sort
+	for i := 0; i < len(contexts); i++ {
+		for j := i + 1; j < len(contexts); j++ {
+			if contexts[i] > contexts[j] {
+				contexts[i], contexts[j] = contexts[j], contexts[i]
+			}
+		}
+	}
+
+	for _, context := range contexts {
+		lists = append(lists, ContextList{Context: context, Todos: contextMap[context]})
+	}
+
+	return lists
+}
+
 // Model represents the application state
 type Model struct {
-	todos        []todo.Item
-	cursor       int
-	mode         Mode
-	filename     string
-	width        int
-	height       int
-	commandInput textinput.Model // Text input for command mode
-	insertInput  textinput.Model // Text input for insert mode
+	todos         []todo.Item
+	contextLists  []ContextList   // Grouped todos by context
+	listCursor    int             // Which context list is selected
+	itemCursor    int             // Which item in the current list is selected
+	mode          Mode
+	filename      string
+	width         int
+	height        int
+	commandInput  textinput.Model // Text input for command mode
+	insertInput   textinput.Model // Text input for insert mode
 }
 
 // NewModel creates a new TUI model
@@ -73,7 +129,9 @@ func NewModel(filename string) Model {
 
 	return Model{
 		todos:        todos,
-		cursor:       0,
+		contextLists: groupTodosByContext(todos),
+		listCursor:   0,
+		itemCursor:   0,
 		mode:         ModeNormal,
 		filename:     filename,
 		commandInput: cmdInput,
@@ -152,16 +210,93 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "q":
 		return m, tea.Quit
 	case "up", "k":
-		if m.cursor > 0 {
-			m.cursor--
+		// Move up within current list
+		if m.itemCursor > 0 {
+			m.itemCursor--
+		} else if m.listCursor > 0 {
+			// Move to previous list
+			m.listCursor--
+			if len(m.contextLists) > 0 && m.listCursor < len(m.contextLists) {
+				m.itemCursor = len(m.contextLists[m.listCursor].Todos) - 1
+			}
 		}
 	case "down", "j":
-		if m.cursor < len(m.todos)-1 {
-			m.cursor++
+		// Move down within current list
+		if len(m.contextLists) > 0 && m.listCursor < len(m.contextLists) {
+			if m.itemCursor < len(m.contextLists[m.listCursor].Todos)-1 {
+				m.itemCursor++
+			} else if m.listCursor < len(m.contextLists)-1 {
+				// Move to next list
+				m.listCursor++
+				m.itemCursor = 0
+			}
+		}
+	case "left", "h":
+		// Move to previous list
+		if m.listCursor > 0 {
+			m.listCursor--
+			// Adjust item cursor if needed
+			if len(m.contextLists) > 0 && m.itemCursor >= len(m.contextLists[m.listCursor].Todos) {
+				m.itemCursor = len(m.contextLists[m.listCursor].Todos) - 1
+			}
+		}
+	case "right", "l":
+		// Move to next list
+		if len(m.contextLists) > 0 && m.listCursor < len(m.contextLists)-1 {
+			m.listCursor++
+			// Adjust item cursor if needed
+			if m.itemCursor >= len(m.contextLists[m.listCursor].Todos) {
+				m.itemCursor = len(m.contextLists[m.listCursor].Todos) - 1
+			}
 		}
 	}
 
 	return m, nil
+}
+
+// getCurrentTodo returns the currently selected todo item and its index in the todos slice
+func (m Model) getCurrentTodo() (*todo.Item, int) {
+	if len(m.contextLists) == 0 || m.listCursor >= len(m.contextLists) {
+		return nil, -1
+	}
+
+	currentList := m.contextLists[m.listCursor]
+	if m.itemCursor >= len(currentList.Todos) {
+		return nil, -1
+	}
+
+	selectedItem := currentList.Todos[m.itemCursor]
+
+	// Find this item in the main todos slice
+	for i, item := range m.todos {
+		if item.Raw == selectedItem.Raw && item.Description == selectedItem.Description {
+			return &m.todos[i], i
+		}
+	}
+
+	return nil, -1
+}
+
+// refreshContextLists rebuilds the context lists after todos change
+func (m *Model) refreshContextLists() {
+	m.contextLists = groupTodosByContext(m.todos)
+
+	// Ensure cursors are still valid
+	if m.listCursor >= len(m.contextLists) {
+		m.listCursor = len(m.contextLists) - 1
+	}
+	if m.listCursor < 0 {
+		m.listCursor = 0
+	}
+
+	if len(m.contextLists) > 0 && m.listCursor < len(m.contextLists) {
+		if m.itemCursor >= len(m.contextLists[m.listCursor].Todos) {
+			m.itemCursor = len(m.contextLists[m.listCursor].Todos) - 1
+		}
+		if m.itemCursor < 0 {
+			m.itemCursor = 0
+		}
+	}
 }
 
 // executeCommand parses and executes a command
@@ -195,14 +330,8 @@ func (m Model) cmdAdd(description string) (Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// Create new todo item
-	newItem := todo.Item{
-		Raw:         description,
-		Description: description,
-		Completed:   false,
-		Contexts:    []string{},
-		Projects:    []string{},
-	}
+	// Parse the new todo to extract contexts
+	newItem := todo.Parse(description)
 
 	m.todos = append(m.todos, newItem)
 
@@ -212,30 +341,41 @@ func (m Model) cmdAdd(description string) (Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Refresh context lists
+	m.refreshContextLists()
+
 	// Return to normal mode
 	m.mode = ModeNormal
 	m.commandInput.Blur()
-
-	// Move cursor to the new item
-	m.cursor = len(m.todos) - 1
 
 	return m, nil
 }
 
 // cmdEdit edits the current task
 func (m Model) cmdEdit(newDescription string) (Model, tea.Cmd) {
-	if len(m.todos) == 0 || newDescription == "" {
+	if newDescription == "" {
 		return m, nil
 	}
 
-	// Update the description
-	m.todos[m.cursor].Description = newDescription
-	m.todos[m.cursor].Raw = newDescription
+	// Get current todo
+	_, idx := m.getCurrentTodo()
+	if idx == -1 {
+		return m, nil
+	}
+
+	// Parse the new description to extract contexts
+	updatedItem := todo.Parse(newDescription)
+
+	// Update the item in todos
+	m.todos[idx] = updatedItem
 
 	// Save to file
 	if err := todo.SaveToFile(m.filename, m.todos); err != nil {
 		return m, nil
 	}
+
+	// Refresh context lists
+	m.refreshContextLists()
 
 	// Return to normal mode
 	m.mode = ModeNormal
@@ -246,23 +386,28 @@ func (m Model) cmdEdit(newDescription string) (Model, tea.Cmd) {
 
 // cmdDone marks the current task as complete
 func (m Model) cmdDone(args string) (Model, tea.Cmd) {
-	if len(m.todos) == 0 {
+	// Get current todo
+	_, idx := m.getCurrentTodo()
+	if idx == -1 {
 		return m, nil
 	}
 
 	// Mark as completed
-	m.todos[m.cursor].Completed = true
+	m.todos[idx].Completed = true
 
 	// Update raw string to include 'x' marker
-	raw := m.todos[m.cursor].Raw
+	raw := m.todos[idx].Raw
 	if !strings.HasPrefix(raw, "x ") {
-		m.todos[m.cursor].Raw = "x " + raw
+		m.todos[idx].Raw = "x " + raw
 	}
 
 	// Save to file
 	if err := todo.SaveToFile(m.filename, m.todos); err != nil {
 		return m, nil
 	}
+
+	// Refresh context lists
+	m.refreshContextLists()
 
 	// Return to normal mode
 	m.mode = ModeNormal
@@ -273,22 +418,22 @@ func (m Model) cmdDone(args string) (Model, tea.Cmd) {
 
 // cmdDelete deletes the current task
 func (m Model) cmdDelete(args string) (Model, tea.Cmd) {
-	if len(m.todos) == 0 {
+	// Get current todo
+	_, idx := m.getCurrentTodo()
+	if idx == -1 {
 		return m, nil
 	}
 
-	// Remove the item at cursor
-	m.todos = append(m.todos[:m.cursor], m.todos[m.cursor+1:]...)
-
-	// Adjust cursor if needed
-	if m.cursor >= len(m.todos) && m.cursor > 0 {
-		m.cursor--
-	}
+	// Remove the item
+	m.todos = append(m.todos[:idx], m.todos[idx+1:]...)
 
 	// Save to file
 	if err := todo.SaveToFile(m.filename, m.todos); err != nil {
 		return m, nil
 	}
+
+	// Refresh context lists
+	m.refreshContextLists()
 
 	// Return to normal mode
 	m.mode = ModeNormal
@@ -326,18 +471,14 @@ func (m Model) handleInsertMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// Add the todo
 		description := m.insertInput.Value()
 		if description != "" {
-			newItem := todo.Item{
-				Raw:         description,
-				Description: description,
-				Completed:   false,
-				Contexts:    []string{},
-				Projects:    []string{},
-			}
+			// Parse the new todo to extract contexts
+			newItem := todo.Parse(description)
 			m.todos = append(m.todos, newItem)
 
 			// Save to file
 			if err := todo.SaveToFile(m.filename, m.todos); err == nil {
-				m.cursor = len(m.todos) - 1
+				// Refresh context lists
+				m.refreshContextLists()
 			}
 		}
 
@@ -375,23 +516,40 @@ func (m Model) View() string {
 
 	s += headerStyle.Render("TADA - Todo List") + "\n\n"
 
-	// Todo list
+	// Todo lists by context
 	if len(m.todos) == 0 {
 		s += "  No todos yet. Press 'i' to add one!\n"
 	} else {
-		for i, item := range m.todos {
-			cursor := " "
-			if m.cursor == i {
-				cursor = ">"
+		// Render each context list
+		for listIdx, contextList := range m.contextLists {
+			// Context header
+			contextHeaderStyle := lipgloss.NewStyle().
+				Bold(true).
+				Foreground(lipgloss.Color("magenta")).
+				Underline(true)
+
+			if listIdx == m.listCursor {
+				contextHeaderStyle = contextHeaderStyle.Foreground(lipgloss.Color("cyan"))
 			}
 
-			// Style the item
-			itemStyle := lipgloss.NewStyle()
-			if item.Completed {
-				itemStyle = itemStyle.Foreground(lipgloss.Color("240")).Strikethrough(true)
-			}
+			s += contextHeaderStyle.Render(fmt.Sprintf("@%s (%d)", contextList.Context, len(contextList.Todos))) + "\n"
 
-			s += fmt.Sprintf("%s %s\n", cursor, itemStyle.Render(item.Description))
+			// Render todos in this context
+			for itemIdx, item := range contextList.Todos {
+				cursor := "  "
+				if listIdx == m.listCursor && itemIdx == m.itemCursor {
+					cursor = "> "
+				}
+
+				// Style the item
+				itemStyle := lipgloss.NewStyle()
+				if item.Completed {
+					itemStyle = itemStyle.Foreground(lipgloss.Color("240")).Strikethrough(true)
+				}
+
+				s += fmt.Sprintf("%s%s\n", cursor, itemStyle.Render(item.Description))
+			}
+			s += "\n" // Space between lists
 		}
 	}
 
@@ -429,7 +587,7 @@ func (m Model) View() string {
 	help := ""
 	switch m.mode {
 	case ModeNormal:
-		help = "i/enter: insert | v: visual | :: command | j/k: navigate | q: quit"
+		help = "i/enter: insert | v: visual | :: command | j/k: up/down | h/l: prev/next list | q: quit"
 	case ModeInsert:
 		help = "enter: add todo | esc: cancel"
 	case ModeCommand:
