@@ -148,6 +148,9 @@ type Model struct {
 	waitingLeader      bool            // True when waiting for leader command
 	confirmingDelete   bool            // True when waiting for delete confirmation
 	deleteConfirmIndex int             // Index of todo to delete after confirmation
+	availableCommands  []string        // List of available commands for autocomplete
+	showAutocomplete   bool            // True when showing autocomplete suggestions
+	autocompleteCursor int             // Index of selected autocomplete suggestion
 }
 
 // NewModel creates a new TUI model
@@ -193,6 +196,9 @@ func NewModel(filename string) Model {
 		waitingLeader:      false,
 		confirmingDelete:   false,
 		deleteConfirmIndex: -1,
+		availableCommands:  []string{"add", "edit", "done", "delete", "del", "archive"},
+		showAutocomplete:   false,
+		autocompleteCursor: 0,
 	}
 }
 
@@ -665,21 +671,93 @@ func (m Model) cmdArchive(args string) (Model, tea.Cmd) {
 	return m, nil
 }
 
+// getAutocompleteSuggestions returns commands that match the current input
+func (m Model) getAutocompleteSuggestions() []string {
+	input := m.commandInput.Value()
+	if input == "" {
+		return m.availableCommands
+	}
+
+	var suggestions []string
+	for _, cmd := range m.availableCommands {
+		if strings.HasPrefix(cmd, input) {
+			suggestions = append(suggestions, cmd)
+		}
+	}
+	return suggestions
+}
+
 // handleCommandMode handles key presses in command mode
 func (m Model) handleCommandMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
+		if m.showAutocomplete {
+			m.showAutocomplete = false
+			return m, nil
+		}
 		m.mode = ModeNormal
 		m.commandInput.Blur()
+		m.showAutocomplete = false
 		return m, nil
 	case "enter":
+		if m.showAutocomplete {
+			// Select the highlighted suggestion
+			suggestions := m.getAutocompleteSuggestions()
+			if len(suggestions) > 0 && m.autocompleteCursor < len(suggestions) {
+				m.commandInput.SetValue(suggestions[m.autocompleteCursor])
+				m.showAutocomplete = false
+				m.autocompleteCursor = 0
+				return m, nil
+			}
+		}
 		// Execute the command
+		m.showAutocomplete = false
 		return m.executeCommand()
+	case "tab", "/":
+		// Show autocomplete
+		suggestions := m.getAutocompleteSuggestions()
+		if len(suggestions) > 0 {
+			if !m.showAutocomplete {
+				m.showAutocomplete = true
+				m.autocompleteCursor = 0
+			} else {
+				// Cycle through suggestions
+				m.autocompleteCursor = (m.autocompleteCursor + 1) % len(suggestions)
+			}
+		}
+		return m, nil
+	case "down", "ctrl+n":
+		if m.showAutocomplete {
+			suggestions := m.getAutocompleteSuggestions()
+			if len(suggestions) > 0 {
+				m.autocompleteCursor = (m.autocompleteCursor + 1) % len(suggestions)
+			}
+			return m, nil
+		}
+	case "up", "ctrl+p":
+		if m.showAutocomplete {
+			suggestions := m.getAutocompleteSuggestions()
+			if len(suggestions) > 0 {
+				m.autocompleteCursor = (m.autocompleteCursor - 1 + len(suggestions)) % len(suggestions)
+			}
+			return m, nil
+		}
 	}
 
 	// Let the textinput handle the key
 	var cmd tea.Cmd
 	m.commandInput, cmd = m.commandInput.Update(msg)
+
+	// Update autocomplete suggestions as user types
+	if m.showAutocomplete {
+		suggestions := m.getAutocompleteSuggestions()
+		if len(suggestions) == 0 {
+			m.showAutocomplete = false
+		} else if m.autocompleteCursor >= len(suggestions) {
+			m.autocompleteCursor = 0
+		}
+	}
+
 	return m, cmd
 }
 
@@ -870,6 +948,36 @@ func (m Model) View() string {
 	// Command/Insert input prompt
 	if m.mode == ModeCommand {
 		s += "\n" + m.commandInput.View()
+
+		// Show autocomplete suggestions if active
+		if m.showAutocomplete {
+			suggestions := m.getAutocompleteSuggestions()
+			if len(suggestions) > 0 {
+				s += "\n"
+				autocompleteStyle := lipgloss.NewStyle().
+					Foreground(m.styles.Theme.Foreground).
+					Background(m.styles.Theme.Background).
+					Padding(0, 1).
+					Border(lipgloss.RoundedBorder()).
+					BorderForeground(m.styles.Theme.Accent)
+
+				selectedStyle := lipgloss.NewStyle().
+					Foreground(m.styles.Theme.Background).
+					Background(m.styles.Theme.Accent).
+					Bold(true).
+					Padding(0, 1)
+
+				var suggestionLines []string
+				for i, suggestion := range suggestions {
+					if i == m.autocompleteCursor {
+						suggestionLines = append(suggestionLines, selectedStyle.Render("▸ "+suggestion))
+					} else {
+						suggestionLines = append(suggestionLines, "  "+suggestion)
+					}
+				}
+				s += autocompleteStyle.Render(strings.Join(suggestionLines, "\n"))
+			}
+		}
 	} else if m.mode == ModeInsert {
 		s += "\n" + m.insertInput.View()
 	}
@@ -890,7 +998,7 @@ func (m Model) View() string {
 		case ModeInsert:
 			help = "enter: save changes • esc: cancel"
 		case ModeCommand:
-			help = "add <task> • edit <new text> • done • delete/del • enter: execute • esc: cancel"
+			help = "add <task> • edit <new text> • done • delete/del • archive • tab//: autocomplete • enter: execute • esc: cancel"
 		case ModeVisual:
 			help = "esc: back to normal mode"
 		}
