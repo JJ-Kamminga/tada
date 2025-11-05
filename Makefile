@@ -42,6 +42,11 @@ run-dev: build
 # Format code
 fmt:
 	gofmt -w .
+	@if command -v goimports >/dev/null 2>&1; then \
+		goimports -w .; \
+	else \
+		echo "goimports not found. Install with: go install golang.org/x/tools/cmd/goimports@latest"; \
+	fi
 
 # Run linter
 lint:

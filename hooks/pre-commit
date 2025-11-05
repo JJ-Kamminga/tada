@@ -33,6 +33,19 @@ if [ -n "$UNFORMATTED" ]; then
     echo -e "${YELLOW}Run 'gofmt -w .' to fix formatting${NC}"
     exit 1
 fi
+
+# Check goimports if available
+if command -v goimports &> /dev/null; then
+    UNFORMATTED_IMPORTS=$(goimports -l . 2>&1 | grep -v "^vendor/" || true)
+    if [ -n "$UNFORMATTED_IMPORTS" ]; then
+        echo -e "${RED}✗ Import formatting issues found in:${NC}"
+        echo "$UNFORMATTED_IMPORTS"
+        echo ""
+        echo -e "${YELLOW}Run 'goimports -w .' to fix imports${NC}"
+        exit 1
+    fi
+fi
+
 echo -e "${GREEN}✓ Code formatting looks good${NC}"
 echo ""
 

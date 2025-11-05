@@ -107,7 +107,7 @@ func LoadFromFile(filename string) ([]Item, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer file.Close() //nolint:errcheck // Read-only operation, close error not critical
 
 	var items []Item
 	scanner := bufio.NewScanner(file)
@@ -124,12 +124,16 @@ func LoadFromFile(filename string) ([]Item, error) {
 }
 
 // SaveToFile saves todos to a file
-func SaveToFile(filename string, items []Item) error {
+func SaveToFile(filename string, items []Item) (err error) {
 	file, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
 
 	writer := bufio.NewWriter(file)
 	for _, item := range items {
@@ -205,17 +209,19 @@ func ArchiveOldCompletedTodos(todos []Item, archiveDir string) ([]Item, error) {
 		for _, item := range items {
 			_, err := fmt.Fprintln(writer, item.String())
 			if err != nil {
-				file.Close()
+				_ = file.Close() // Best effort close on error path
 				return nil, fmt.Errorf("failed to write to archive file %s: %w", archiveFilename, err)
 			}
 		}
 
 		if err := writer.Flush(); err != nil {
-			file.Close()
+			_ = file.Close() // Best effort close on error path
 			return nil, fmt.Errorf("failed to flush archive file %s: %w", archiveFilename, err)
 		}
 
-		file.Close()
+		if err := file.Close(); err != nil {
+			return nil, fmt.Errorf("failed to close archive file %s: %w", archiveFilename, err)
+		}
 	}
 
 	return remainingTodos, nil
