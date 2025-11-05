@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"tada/internal/todo"
 
@@ -76,6 +77,11 @@ func groupTodosByContext(todos []todo.Item) []ContextList {
 
 	// Group todos by context
 	for i, item := range todos {
+		// Skip completed todos older than 5 days
+		if !item.ShouldBeVisible() {
+			continue
+		}
+
 		todoWithIdx := TodoWithIndex{Item: item, Index: i}
 		if len(item.Contexts) == 0 {
 			// No context, put in "No Context" list
@@ -500,6 +506,8 @@ func (m Model) executeCommand() (Model, tea.Cmd) {
 		return m.cmdDone(args)
 	case "delete", "del":
 		return m.cmdDelete(args)
+	case "archive":
+		return m.cmdArchive(args)
 	}
 
 	return m, nil
@@ -610,6 +618,40 @@ func (m Model) cmdDelete(args string) (Model, tea.Cmd) {
 
 	// Save to file
 	if err := todo.SaveToFile(m.filename, m.todos); err != nil {
+		return m, nil
+	}
+
+	// Refresh context lists
+	m.refreshContextLists()
+
+	// Return to normal mode
+	m.mode = ModeNormal
+	m.commandInput.Blur()
+
+	return m, nil
+}
+
+// cmdArchive archives completed todos older than 5 days
+func (m Model) cmdArchive(args string) (Model, tea.Cmd) {
+	// Get the directory of the todo file for placing archive files
+	dir := filepath.Dir(m.filename)
+
+	// Archive old completed todos
+	remainingTodos, err := todo.ArchiveOldCompletedTodos(m.todos, dir)
+	if err != nil {
+		// If archiving fails, just return without changes
+		m.mode = ModeNormal
+		m.commandInput.Blur()
+		return m, nil
+	}
+
+	// Update the todos list
+	m.todos = remainingTodos
+
+	// Save updated todo list
+	if err := todo.SaveToFile(m.filename, m.todos); err != nil {
+		m.mode = ModeNormal
+		m.commandInput.Blur()
 		return m, nil
 	}
 

@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // Item represents a todo item following the todo.txt format
@@ -139,4 +140,83 @@ func SaveToFile(filename string, items []Item) error {
 	}
 
 	return writer.Flush()
+}
+
+// IsCompletedOlderThanDays checks if a completed todo is older than the specified number of days
+func (i Item) IsCompletedOlderThanDays(days int) bool {
+	if !i.Completed || i.CompletionDate == "" {
+		return false
+	}
+
+	completionTime, err := time.Parse("2006-01-02", i.CompletionDate)
+	if err != nil {
+		return false
+	}
+
+	cutoffDate := time.Now().AddDate(0, 0, -days)
+	return completionTime.Before(cutoffDate)
+}
+
+// ShouldBeVisible returns true if a todo should be visible in the main view
+// Completed todos older than 5 days should not be visible
+func (i Item) ShouldBeVisible() bool {
+	if !i.Completed {
+		return true
+	}
+	return !i.IsCompletedOlderThanDays(5)
+}
+
+// ArchiveOldCompletedTodos moves completed todos older than 5 days to archive files
+// Returns the remaining todos (without archived items) and any error
+func ArchiveOldCompletedTodos(todos []Item, archiveDir string) ([]Item, error) {
+	// Group old completed todos by month
+	archiveByMonth := make(map[string][]Item)
+	var remainingTodos []Item
+
+	for _, item := range todos {
+		if item.IsCompletedOlderThanDays(5) {
+			// Parse completion date to get year and month
+			if item.CompletionDate != "" {
+				completionTime, err := time.Parse("2006-01-02", item.CompletionDate)
+				if err == nil {
+					monthKey := completionTime.Format("2006_01")
+					archiveByMonth[monthKey] = append(archiveByMonth[monthKey], item)
+					continue
+				}
+			}
+			// If we can't parse the date, keep it in the main list
+			remainingTodos = append(remainingTodos, item)
+		} else {
+			remainingTodos = append(remainingTodos, item)
+		}
+	}
+
+	// Write each month's items to the appropriate archive file
+	for monthKey, items := range archiveByMonth {
+		archiveFilename := fmt.Sprintf("%s/todo_archive_%s.txt", archiveDir, monthKey)
+
+		// Open file in append mode, create if doesn't exist
+		file, err := os.OpenFile(archiveFilename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open archive file %s: %w", archiveFilename, err)
+		}
+
+		writer := bufio.NewWriter(file)
+		for _, item := range items {
+			_, err := fmt.Fprintln(writer, item.String())
+			if err != nil {
+				file.Close()
+				return nil, fmt.Errorf("failed to write to archive file %s: %w", archiveFilename, err)
+			}
+		}
+
+		if err := writer.Flush(); err != nil {
+			file.Close()
+			return nil, fmt.Errorf("failed to flush archive file %s: %w", archiveFilename, err)
+		}
+
+		file.Close()
+	}
+
+	return remainingTodos, nil
 }
