@@ -26,7 +26,6 @@ tada/
 ### Key Components
 
 1. **cmd/root.go**: Main command setup
-   - Handles both `tada` and `td` aliases
    - Manages file path resolution (defaults to ~/.tada/todo.txt)
    - Initializes the Bubble Tea program
 

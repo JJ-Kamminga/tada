@@ -15,23 +15,25 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](h
 - **Leader key** (`Space`) for quick access to common commands
 - Beautiful styling with color-coded priority badges and mode indicators
 - Safe deletion with confirmation prompts
-- Both `tada` and `td` commands available
 
 ## Installation
 
 ### Prerequisites
+
 - Go 1.21 or higher ([install Go](https://go.dev/doc/install))
 - Git
 
 ### Quick Start
 
 1. **Clone the repository:**
+
    ```bash
    git clone <repository-url>
    cd tada
    ```
 
 2. **Run the install script:**
+
    ```bash
    ./install.sh
    ```
@@ -42,6 +44,7 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](h
    - Optionally install `tada` to your PATH
 
 3. **Configure your todo directory:**
+
    ```bash
    tada config set dir ~/.tada
    ```
@@ -49,29 +52,18 @@ Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](h
    This sets the directory where your `todo.txt` and archive files will be stored.
 
 4. **Start using tada:**
+
    ```bash
    tada    # If installed to PATH
    # or
    ./tada  # If not installed to PATH
-   ```
-
-   On first run with a new directory, an empty `todo.txt` will be created automatically.
 
 ### Configuration
 
-A configuration file is **required** to use tada. On first run without configuration, you'll see:
-
-```
-Error: No todo directory configured.
-
-To get started, set your todo directory:
-  tada config set dir /path/to/your/todo/directory
-
-Example:
-  tada config set dir ~/.tada
-```
+A configuration file is **required** to use tada.
 
 **Configuration commands:**
+
 ```bash
 tada config set dir PATH  # Set todo directory (required)
 tada config get           # Show all configuration
@@ -82,7 +74,8 @@ tada config path          # Show config file path (~/.tada/config.yml)
 **Directory structure:**
 
 Once configured, your todo directory will contain:
-```
+
+```bash
 ~/.tada/
 ├── todo.txt                    # Your active todos
 ├── todo_archive_2024_11.txt    # November 2024 archive
@@ -106,16 +99,19 @@ Press `Esc` to return to Normal mode from any other mode.
 ### Normal Mode Keybindings
 
 **Navigation:**
+
 - `j/k` or `↑/↓` - Navigate todos (within and across context lists)
 - `h/l` or `←/→` - Switch between context lists
 - `q` or `Ctrl+C` - Quit
 
 **Mode switching:**
+
 - `i` or `Enter` - Enter Insert mode (edit selected todo)
 - `:` - Enter Command mode
 - `v` - Enter Visual mode
 
 **Leader key** (`Space` + ...):
+
 - `e` - Edit current task
 - `a` or `n` - Add new task
 - `d` or `x` - Delete current task (with confirmation)
@@ -134,33 +130,39 @@ Type `:` to enter command mode, then use these commands:
 ### Common Workflows
 
 **Adding a task (quick method):**
+
 1. Press `Space` then `a`
 2. Type your task: `Buy groceries @Personal`
 3. Press `Enter`
 
 **Adding a prioritized task:**
+
 1. Press `:`
 2. Type: `add (A) Fix critical bug @Work`
 3. Press `Enter` - task appears with red (A) badge at the top
 
 **Editing a task:**
+
 1. Navigate to task with `j/k`
 2. Press `i` or `Enter`
 3. Edit the prefilled text
 4. Press `Enter` to save
 
 **Deleting a task:**
+
 1. Navigate to task with `j/k`
 2. Press `Space` then `d`
 3. Confirm with `d`, `x`, or `Enter` (or `Esc` to cancel)
 
 **Marking as complete:**
+
 1. Navigate to task with `j/k`
 2. Press `:`
 3. Type `done`
 4. Press `Enter`
 
 **Archiving old completed tasks:**
+
 1. Press `:`
 2. Type `archive`
 3. Press `Enter`
@@ -183,6 +185,7 @@ Todos are automatically grouped by their `@context` tags:
 Following the todo.txt format, priorities are indicated by `(A)` through `(Z)`:
 
 **Visual indicators:**
+
 - **(A)** - Red background (urgent)
 - **(B)** - Orange background (high priority)
 - **(C)** - Yellow background (medium-high priority)
@@ -192,6 +195,7 @@ Following the todo.txt format, priorities are indicated by `(A)` through `(Z)`:
 - No indicator for unprioritized tasks
 
 **Behavior:**
+
 - Todos are automatically sorted by priority within each context (A → Z, then unprioritized)
 - Priority must be at the start of the task description: `(A) Fix bug @Work`
 
@@ -208,7 +212,7 @@ Completed todos older than 5 days can be archived:
 
 The app follows the [todo.txt standard](https://github.com/todotxt/todo.txt). Example:
 
-```
+```tada
 x 2025-09-25 2025-09-24 Review blog post @Work
 (A) 2025-09-26 Call dentist for appointment @Personal +Health
 2025-09-27 Buy groceries for the weekend @Personal
@@ -216,6 +220,7 @@ x 2025-09-25 2025-09-24 Review blog post @Work
 ```
 
 **Format details:**
+
 - `x` at start = completed
 - `(A)` through `(Z)` = priority
 - First date = completion date (if completed)
@@ -241,7 +246,8 @@ The app features a beautiful default color scheme:
 ## Development
 
 ### Project Structure
-```
+
+```bash
 tada/
 ├── cmd/
 │   ├── root.go          # Main command
@@ -279,6 +285,7 @@ make install-hooks
 ```
 
 The pre-commit hook runs:
+
 1. Code formatting checks (gofmt)
 2. Linting (golangci-lint or go vet)
 3. Tests (go test)
@@ -311,23 +318,6 @@ go test ./... -cover
 
 # Run specific package
 go test ./internal/todo -v
-```
-
-Current test coverage:
-- `internal/todo`: 88.9%
-- `internal/tui`: 7.9% (utility functions)
-- Overall: 22.9%
-
-### CI/CD
-
-GitHub Actions workflows automatically:
-- Build and test on Go 1.21, 1.22, and 1.23
-- Run linting checks
-- Generate coverage reports
-- Build binaries for Linux, macOS, and Windows
-- Upload build artifacts
-
-See `.github/workflows/ci.yml` for details.
 
 ## Building from Source
 
@@ -341,5 +331,3 @@ go build -o tada
 # Or use the built-in alias
 ./td
 ```
-
-The `td` command is a built-in alias (cobra alias) and works the same as `tada`.

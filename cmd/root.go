@@ -13,10 +13,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:     "tada",
-	Aliases: []string{"td"},
-	Short:   "A vim-inspired todo list manager",
-	Long:    `tada is a terminal-based todo list manager using the todo.txt format with vim-inspired keybindings.`,
+	Use:   "tada",
+	Short: "A vim-inspired todo list manager",
+	Long:  `tada is a terminal-based todo list manager using the todo.txt format with vim-inspired keybindings.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Get the todo directory from config
 		todoDir, err := config.GetTodoDir()
