@@ -111,6 +111,94 @@ tada/
 
 All changes are automatically saved to your todo.txt file.
 
+## Installation
+
+### Prerequisites
+- Go 1.21 or higher ([install Go](https://go.dev/doc/install))
+- Git
+
+### Quick Start
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd tada
+   ```
+
+2. **Run the install script:**
+   ```bash
+   ./install.sh
+   ```
+
+   The script will:
+   - Install dependencies
+   - Build the application
+   - Optionally install `tada` to your PATH
+
+3. **Configure your todo file location:**
+
+   **Option A: Use the default location** (recommended for first-time users)
+   ```bash
+   mkdir -p ~/.tada
+   touch ~/.tada/todo.txt
+   ```
+
+   **Option B: Use a custom location**
+   ```bash
+   # Set your preferred location (tada will create the file if needed)
+   tada config set file ~/Documents/todo.txt
+   # Or any other location you prefer
+   ```
+
+4. **Start using tada:**
+   ```bash
+   tada    # If installed to PATH
+   # or
+   ./tada  # If not installed to PATH
+   ```
+
+### Configuring Todo File Location
+
+If you want to store your todo file in a custom location, you can configure it once and `tada` will always use that location:
+
+```bash
+# Set your custom todo file location
+tada config set file /path/to/your/todo.txt
+
+# Or use a path relative to your home directory
+tada config set file ~/Documents/todo.txt
+```
+
+Once configured, you can use `tada` without any flags. The configuration is stored in `~/.tada/config.yml`.
+
+**Configuration commands:**
+```bash
+tada config get          # Show all configuration
+tada config get file     # Show todo file location
+tada config set file PATH  # Set todo file location
+tada config path         # Show config file path
+```
+
+**Note:** The `-f` flag still works and takes priority over the config file if you need to temporarily use a different file.
+
+### Creating a Short Alias
+
+If you prefer the `td` command, add this to your shell configuration (~/.bashrc, ~/.zshrc, etc.):
+
+```bash
+alias td='tada'
+```
+
+### Getting Started
+
+1. Run `tada` to start the app
+2. Press `Space` then `a` (or `n`) to add your first task
+3. Type your task, for example: `Buy groceries @Personal`
+4. Press `Enter` to save
+5. Use `j/k` to navigate and explore the keybindings!
+
+Your todos are automatically saved to your todo.txt file. You can edit it directly with any text editor, and changes will be reflected when you restart `tada`.
+
 ## Context-Based Organization
 
 Todos are automatically grouped by their `@context` tags:

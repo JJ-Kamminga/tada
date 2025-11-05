@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"tada/internal/config"
 	"tada/internal/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -19,14 +20,12 @@ var rootCmd = &cobra.Command{
 	Short:   "A vim-inspired todo list manager",
 	Long:    `tada is a terminal-based todo list manager using the todo.txt format with vim-inspired keybindings.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Get the todo file path
-		if todoFile == "" {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				fmt.Println("Error getting home directory:", err)
-				os.Exit(1)
-			}
-			todoFile = filepath.Join(home, ".tada", "todo.txt")
+		// Get the todo file path (priority: flag > config > default)
+		var err error
+		todoFile, err = config.GetTodoFilePath(todoFile)
+		if err != nil {
+			fmt.Println("Error getting todo file path:", err)
+			os.Exit(1)
 		}
 
 		// Ensure the directory exists
