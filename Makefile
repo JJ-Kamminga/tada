@@ -1,4 +1,4 @@
-.PHONY: build test test-verbose test-coverage clean install run
+.PHONY: build test test-verbose test-coverage clean install run lint fmt install-hooks uninstall-hooks
 
 # Build the application
 build:
@@ -38,3 +38,26 @@ run: build
 # Run the application with a custom todo file
 run-dev: build
 	./tada -f ./test-todo.txt
+
+# Format code
+fmt:
+	gofmt -w .
+
+# Run linter
+lint:
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run ./...; \
+	else \
+		echo "golangci-lint not found, running go vet instead"; \
+		go vet ./...; \
+	fi
+
+# Install git hooks
+install-hooks:
+	@chmod +x hooks/install.sh
+	@./hooks/install.sh
+
+# Uninstall git hooks
+uninstall-hooks:
+	@rm -f .git/hooks/pre-commit
+	@echo "Git hooks uninstalled"

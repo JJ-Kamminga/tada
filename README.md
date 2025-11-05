@@ -151,6 +151,77 @@ The app features a beautiful default color scheme with:
 
 **Future Customization:** The theming system is architected to support loading custom colors from a config file. All colors are centralized in `internal/tui/theme.go`, making it easy to add configuration file support in the future.
 
+## Development
+
+### Setup
+
+1. Clone the repository
+2. Install dependencies: `go mod download`
+3. Install git hooks: `make install-hooks`
+
+### Git Hooks
+
+Pre-commit hooks are available to ensure code quality:
+
+```bash
+# Install hooks (recommended)
+make install-hooks
+
+# Or manually
+./hooks/install.sh
+```
+
+The pre-commit hook runs:
+1. **Code formatting** checks (gofmt)
+2. **Linting** (golangci-lint or go vet)
+3. **Tests** (go test)
+
+To skip the hook when needed: `git commit --no-verify`
+
+### Make Commands
+
+```bash
+make build                 # Build the application
+make test                  # Run tests
+make test-verbose          # Run tests with verbose output
+make test-coverage         # Run tests with coverage report
+make test-coverage-detail  # Generate HTML coverage report
+make lint                  # Run linter (golangci-lint or go vet)
+make fmt                   # Format code with gofmt
+make install-hooks         # Install git hooks
+make uninstall-hooks       # Uninstall git hooks
+make clean                 # Remove build artifacts
+```
+
+### CI/CD
+
+GitHub Actions workflows automatically:
+- Build and test on Go 1.21, 1.22, and 1.23
+- Run linting checks
+- Generate coverage reports
+- Build binaries for Linux, macOS, and Windows
+- Upload build artifacts
+
+See `.github/workflows/ci.yml` for details.
+
+### Testing
+
+```bash
+# Run all tests
+go test ./...
+
+# Run with coverage
+go test ./... -cover
+
+# Run specific package
+go test ./internal/todo -v
+```
+
+Current test coverage:
+- `internal/todo`: 88.9%
+- `internal/tui`: 7.9% (utility functions)
+- Overall: 22.9%
+
 ## Building
 
 ```bash

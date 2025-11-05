@@ -124,10 +124,10 @@ func TestSortTodosByPriority(t *testing.T) {
 
 func TestGroupTodosByContext(t *testing.T) {
 	tests := []struct {
-		name              string
-		todos             []todo.Item
-		expectedContexts  []string // Expected context names in order
-		expectedCounts    map[string]int
+		name             string
+		todos            []todo.Item
+		expectedContexts []string // Expected context names in order
+		expectedCounts   map[string]int
 	}{
 		{
 			name: "single context",
