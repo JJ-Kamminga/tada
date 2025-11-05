@@ -5,45 +5,45 @@ import (
 	"os"
 	"path/filepath"
 
+	"tada/internal/config"
 	"tada/internal/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
 )
 
-var todoFile string
-
 var rootCmd = &cobra.Command{
-	Use:     "tada",
-	Aliases: []string{"td"},
-	Short:   "A vim-inspired todo list manager",
-	Long:    `tada is a terminal-based todo list manager using the todo.txt format with vim-inspired keybindings.`,
+	Use:   "tada",
+	Short: "A vim-inspired todo list manager",
+	Long:  `tada is a terminal-based todo list manager using the todo.txt format with vim-inspired keybindings.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		// Get the todo file path
-		if todoFile == "" {
-			home, err := os.UserHomeDir()
-			if err != nil {
-				fmt.Println("Error getting home directory:", err)
-				os.Exit(1)
-			}
-			todoFile = filepath.Join(home, ".tada", "todo.txt")
+		// Get the todo directory from config
+		todoDir, err := config.GetTodoDir()
+		if err != nil {
+			fmt.Println("Error: No todo directory configured.")
+			fmt.Println()
+			fmt.Println("To get started, set your todo directory:")
+			fmt.Println("  tada config set dir /path/to/your/todo/directory")
+			fmt.Println()
+			fmt.Println("Example:")
+			fmt.Println("  tada config set dir ~/.tada")
+			os.Exit(1)
 		}
 
 		// Ensure the directory exists
-		dir := filepath.Dir(todoFile)
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(todoDir, 0755); err != nil {
 			fmt.Println("Error creating todo directory:", err)
 			os.Exit(1)
 		}
 
-		// If todo.txt doesn't exist, copy the example one
+		// Get the full path to todo.txt
+		todoFile := filepath.Join(todoDir, "todo.txt")
+
+		// If todo.txt doesn't exist, create an empty one
 		if _, err := os.Stat(todoFile); os.IsNotExist(err) {
-			// Try to copy from current directory
-			if _, err := os.Stat("todo.txt"); err == nil {
-				data, err := os.ReadFile("todo.txt")
-				if err == nil {
-					_ = os.WriteFile(todoFile, data, 0644) // Best effort copy of example file
-				}
+			if err := os.WriteFile(todoFile, []byte(""), 0644); err != nil {
+				fmt.Println("Error creating todo.txt:", err)
+				os.Exit(1)
 			}
 		}
 
@@ -62,8 +62,4 @@ func Execute() {
 	if err != nil {
 		os.Exit(1)
 	}
-}
-
-func init() {
-	rootCmd.Flags().StringVarP(&todoFile, "file", "f", "", "Path to todo.txt file (default: ~/.tada/todo.txt)")
 }
