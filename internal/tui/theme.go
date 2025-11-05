@@ -8,18 +8,18 @@ import (
 // This structure makes it easy to load colors from a config file in the future
 type Theme struct {
 	// Colors
-	Primary          lipgloss.Color
-	Secondary        lipgloss.Color
-	Accent           lipgloss.Color
-	Success          lipgloss.Color
-	Warning          lipgloss.Color
-	Danger           lipgloss.Color
-	Muted            lipgloss.Color
-	Background       lipgloss.Color
-	Foreground       lipgloss.Color
-	Border           lipgloss.Color
-	SelectedBorder   lipgloss.Color
-	CompletedText    lipgloss.Color
+	Primary        lipgloss.Color
+	Secondary      lipgloss.Color
+	Accent         lipgloss.Color
+	Success        lipgloss.Color
+	Warning        lipgloss.Color
+	Danger         lipgloss.Color
+	Muted          lipgloss.Color
+	Background     lipgloss.Color
+	Foreground     lipgloss.Color
+	Border         lipgloss.Color
+	SelectedBorder lipgloss.Color
+	CompletedText  lipgloss.Color
 
 	// Mode-specific colors
 	NormalModeColor  lipgloss.Color
@@ -32,18 +32,18 @@ type Theme struct {
 // In the future, this could be replaced with LoadThemeFromConfig()
 func DefaultTheme() Theme {
 	return Theme{
-		Primary:          lipgloss.Color("39"),  // Bright blue
-		Secondary:        lipgloss.Color("170"), // Purple
-		Accent:           lipgloss.Color("205"), // Pink
-		Success:          lipgloss.Color("42"),  // Green
-		Warning:          lipgloss.Color("214"), // Orange
-		Danger:           lipgloss.Color("196"), // Red
-		Muted:           lipgloss.Color("241"),  // Gray
-		Background:       lipgloss.Color("235"), // Dark gray
-		Foreground:       lipgloss.Color("255"), // White
-		Border:           lipgloss.Color("240"), // Border gray
-		SelectedBorder:   lipgloss.Color("39"),  // Bright blue
-		CompletedText:    lipgloss.Color("240"), // Gray for completed items
+		Primary:        lipgloss.Color("39"),  // Bright blue
+		Secondary:      lipgloss.Color("170"), // Purple
+		Accent:         lipgloss.Color("205"), // Pink
+		Success:        lipgloss.Color("42"),  // Green
+		Warning:        lipgloss.Color("214"), // Orange
+		Danger:         lipgloss.Color("196"), // Red
+		Muted:          lipgloss.Color("241"), // Gray
+		Background:     lipgloss.Color("235"), // Dark gray
+		Foreground:     lipgloss.Color("255"), // White
+		Border:         lipgloss.Color("240"), // Border gray
+		SelectedBorder: lipgloss.Color("39"),  // Bright blue
+		CompletedText:  lipgloss.Color("240"), // Gray for completed items
 
 		NormalModeColor:  lipgloss.Color("39"),  // Blue
 		InsertModeColor:  lipgloss.Color("42"),  // Green
@@ -57,16 +57,16 @@ type Styles struct {
 	Theme Theme
 
 	// Header
-	AppTitle       lipgloss.Style
+	AppTitle lipgloss.Style
 
 	// Context headers
-	ContextHeader         lipgloss.Style
-	ContextHeaderActive   lipgloss.Style
+	ContextHeader       lipgloss.Style
+	ContextHeaderActive lipgloss.Style
 
 	// Todo items
-	TodoNormal     lipgloss.Style
-	TodoCompleted  lipgloss.Style
-	TodoCursor     lipgloss.Style
+	TodoNormal    lipgloss.Style
+	TodoCompleted lipgloss.Style
+	TodoCursor    lipgloss.Style
 
 	// Priority badges
 	PriorityA      lipgloss.Style
@@ -77,18 +77,18 @@ type Styles struct {
 	PriorityLow    lipgloss.Style // N-Z
 
 	// Mode indicator
-	ModeNormal     lipgloss.Style
-	ModeInsert     lipgloss.Style
-	ModeCommand    lipgloss.Style
-	ModeVisual     lipgloss.Style
+	ModeNormal  lipgloss.Style
+	ModeInsert  lipgloss.Style
+	ModeCommand lipgloss.Style
+	ModeVisual  lipgloss.Style
 
 	// Help text
-	HelpText       lipgloss.Style
+	HelpText lipgloss.Style
 
 	// Input prompts
-	CommandPrompt  lipgloss.Style
-	InsertPrompt   lipgloss.Style
-	InputText      lipgloss.Style
+	CommandPrompt lipgloss.Style
+	InsertPrompt  lipgloss.Style
+	InputText     lipgloss.Style
 
 	// Layout
 	ContentBox     lipgloss.Style

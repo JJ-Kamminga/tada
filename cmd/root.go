@@ -5,9 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"tada/internal/tui"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
-	"tada/internal/tui"
 )
 
 var todoFile string
@@ -41,7 +42,7 @@ var rootCmd = &cobra.Command{
 			if _, err := os.Stat("todo.txt"); err == nil {
 				data, err := os.ReadFile("todo.txt")
 				if err == nil {
-					os.WriteFile(todoFile, data, 0644)
+					_ = os.WriteFile(todoFile, data, 0644) // Best effort copy of example file
 				}
 			}
 		}

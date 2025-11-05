@@ -133,9 +133,9 @@ func groupTodosByContext(todos []todo.Item) []ContextList {
 // Model represents the application state
 type Model struct {
 	todos              []todo.Item
-	contextLists       []ContextList   // Grouped todos by context
-	listCursor         int             // Which context list is selected
-	itemCursor         int             // Which item in the current list is selected
+	contextLists       []ContextList // Grouped todos by context
+	listCursor         int           // Which context list is selected
+	itemCursor         int           // Which item in the current list is selected
 	mode               Mode
 	filename           string
 	width              int
