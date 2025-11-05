@@ -159,7 +159,7 @@ func NewStyles(theme Theme) Styles {
 		PriorityA: lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("0")).
-			Background(lipgloss.Color("196")). // Bright red
+			Background(lipgloss.Color("196")). // Red
 			Padding(0, 1),
 
 		PriorityB: lipgloss.NewStyle().
@@ -171,13 +171,13 @@ func NewStyles(theme Theme) Styles {
 		PriorityC: lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("0")).
-			Background(lipgloss.Color("226")). // Yellow
+			Background(lipgloss.Color("117")). // Light blue
 			Padding(0, 1),
 
 		PriorityHigh: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("0")).
-			Background(lipgloss.Color("214")). // Orange
+			Foreground(lipgloss.Color("255")).
+			Background(lipgloss.Color("244")). // Grey (for D-F)
 			Padding(0, 1),
 
 		PriorityMedium: lipgloss.NewStyle().
