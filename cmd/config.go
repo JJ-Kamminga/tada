@@ -13,13 +13,13 @@ import (
 var configCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Manage tada configuration",
-	Long:  `Configure tada settings like todo file location.`,
+	Long:  `Configure tada settings like todo directory location.`,
 }
 
 var configSetCmd = &cobra.Command{
 	Use:   "set <key> <value>",
 	Short: "Set a configuration value",
-	Long:  `Set a configuration value. Available keys: file`,
+	Long:  `Set a configuration value. Available keys: dir`,
 	Args:  cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		key := args[0]
@@ -32,9 +32,9 @@ var configSetCmd = &cobra.Command{
 		}
 
 		switch key {
-		case "file":
+		case "dir":
 			// Expand home directory if present
-			if value[:2] == "~/" {
+			if len(value) >= 2 && value[:2] == "~/" {
 				home, err := os.UserHomeDir()
 				if err != nil {
 					fmt.Println("Error getting home directory:", err)
@@ -50,11 +50,11 @@ var configSetCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			cfg.TodoFile = absPath
-			fmt.Printf("Set todo file location to: %s\n", absPath)
+			cfg.TodoDir = absPath
+			fmt.Printf("Set todo directory to: %s\n", absPath)
 		default:
 			fmt.Printf("Unknown config key: %s\n", key)
-			fmt.Println("Available keys: file")
+			fmt.Println("Available keys: dir")
 			os.Exit(1)
 		}
 
@@ -71,7 +71,7 @@ var configSetCmd = &cobra.Command{
 var configGetCmd = &cobra.Command{
 	Use:   "get [key]",
 	Short: "Get a configuration value",
-	Long:  `Get a configuration value. If no key is specified, shows all config. Available keys: file`,
+	Long:  `Get a configuration value. If no key is specified, shows all config. Available keys: dir`,
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := config.Load()
@@ -84,27 +84,23 @@ var configGetCmd = &cobra.Command{
 			// Show all config
 			configPath, _ := config.GetConfigPath()
 			fmt.Printf("Configuration file: %s\n\n", configPath)
-			if cfg.TodoFile != "" {
-				fmt.Printf("file: %s\n", cfg.TodoFile)
+			if cfg.TodoDir != "" {
+				fmt.Printf("dir: %s\n", cfg.TodoDir)
 			} else {
-				home, _ := os.UserHomeDir()
-				defaultPath := filepath.Join(home, ".tada", "todo.txt")
-				fmt.Printf("file: %s (default)\n", defaultPath)
+				fmt.Printf("dir: (not set)\n")
 			}
 		} else {
 			key := args[0]
 			switch key {
-			case "file":
-				if cfg.TodoFile != "" {
-					fmt.Println(cfg.TodoFile)
+			case "dir":
+				if cfg.TodoDir != "" {
+					fmt.Println(cfg.TodoDir)
 				} else {
-					home, _ := os.UserHomeDir()
-					defaultPath := filepath.Join(home, ".tada", "todo.txt")
-					fmt.Printf("%s (default)\n", defaultPath)
+					fmt.Println("(not set)")
 				}
 			default:
 				fmt.Printf("Unknown config key: %s\n", key)
-				fmt.Println("Available keys: file")
+				fmt.Println("Available keys: dir")
 				os.Exit(1)
 			}
 		}

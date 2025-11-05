@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -8,7 +9,7 @@ import (
 )
 
 type Config struct {
-	TodoFile string `yaml:"todo_file"`
+	TodoDir string `yaml:"todo_dir"`
 }
 
 // GetConfigPath returns the path to the config file
@@ -66,28 +67,26 @@ func Save(cfg *Config) error {
 	return os.WriteFile(configPath, data, 0644)
 }
 
-// GetTodoFilePath returns the todo file path from config, flag, or default
-func GetTodoFilePath(flagValue string) (string, error) {
-	// Priority: flag > config > default
-	if flagValue != "" {
-		return flagValue, nil
-	}
-
-	// Try to load from config
+// GetTodoDir returns the todo directory from config
+// Returns an error if config is not set
+func GetTodoDir() (string, error) {
 	cfg, err := Load()
 	if err != nil {
 		return "", err
 	}
 
-	if cfg.TodoFile != "" {
-		return cfg.TodoFile, nil
+	if cfg.TodoDir == "" {
+		return "", fmt.Errorf("todo directory not configured")
 	}
 
-	// Default location
-	home, err := os.UserHomeDir()
+	return cfg.TodoDir, nil
+}
+
+// GetTodoFilePath returns the full path to the todo.txt file
+func GetTodoFilePath() (string, error) {
+	dir, err := GetTodoDir()
 	if err != nil {
 		return "", err
 	}
-
-	return filepath.Join(home, ".tada", "todo.txt"), nil
+	return filepath.Join(dir, "todo.txt"), nil
 }
