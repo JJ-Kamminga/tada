@@ -57,11 +57,25 @@ func priorityValue(priority string) int {
 	return int(priority[0] - 'A')
 }
 
-// sortTodosByPriority sorts todos by priority (A is highest, unprioritized is lowest)
+// sortTodosByPriority sorts todos by completion status first (uncompleted before completed),
+// then by priority within each group (A is highest, unprioritized is lowest)
 func sortTodosByPriority(todos []TodoWithIndex) {
-	// Simple bubble sort by priority
+	// Simple bubble sort by completion status, then priority
 	for i := 0; i < len(todos); i++ {
 		for j := i + 1; j < len(todos); j++ {
+			// First compare completion status
+			iCompleted := todos[i].Item.Completed
+			jCompleted := todos[j].Item.Completed
+
+			// If completion status differs, uncompleted tasks come first
+			if iCompleted != jCompleted {
+				if iCompleted && !jCompleted {
+					todos[i], todos[j] = todos[j], todos[i]
+				}
+				continue
+			}
+
+			// If completion status is the same, sort by priority
 			iPriority := priorityValue(todos[i].Item.Priority)
 			jPriority := priorityValue(todos[j].Item.Priority)
 			if iPriority > jPriority {
@@ -196,7 +210,7 @@ func NewModel(filename string) Model {
 		waitingLeader:      false,
 		confirmingDelete:   false,
 		deleteConfirmIndex: -1,
-		availableCommands:  []string{"add", "edit", "done", "delete", "del", "archive"},
+		availableCommands:  []string{"add", "edit", "done", "delete", "del", "archive", "sort"},
 		showAutocomplete:   false,
 		autocompleteCursor: 0,
 	}
@@ -286,6 +300,9 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "d", "x":
 			// Delete current task
 			return m.leaderDelete()
+		case "s":
+			// Sort tasks
+			return m.leaderSort()
 		case "esc":
 			// Cancel leader mode
 			return m, nil
@@ -414,6 +431,13 @@ func (m Model) leaderDelete() (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// leaderSort sorts tasks by completion status and priority
+func (m Model) leaderSort() (tea.Model, tea.Cmd) {
+	// Refresh context lists (which triggers sorting)
+	m.refreshContextLists()
+	return m, nil
+}
+
 // confirmDelete performs the actual deletion
 func (m Model) confirmDelete() (tea.Model, tea.Cmd) {
 	if m.deleteConfirmIndex < 0 || m.deleteConfirmIndex >= len(m.todos) {
@@ -514,6 +538,8 @@ func (m Model) executeCommand() (Model, tea.Cmd) {
 		return m.cmdDelete(args)
 	case "archive":
 		return m.cmdArchive(args)
+	case "sort":
+		return m.cmdSort(args)
 	}
 
 	return m, nil
@@ -662,6 +688,18 @@ func (m Model) cmdArchive(args string) (Model, tea.Cmd) {
 	}
 
 	// Refresh context lists
+	m.refreshContextLists()
+
+	// Return to normal mode
+	m.mode = ModeNormal
+	m.commandInput.Blur()
+
+	return m, nil
+}
+
+// cmdSort sorts tasks by completion status and priority
+func (m Model) cmdSort(args string) (Model, tea.Cmd) {
+	// Refresh context lists (which triggers sorting)
 	m.refreshContextLists()
 
 	// Return to normal mode
@@ -826,11 +864,9 @@ func (m Model) getPriorityStyle(priority string) lipgloss.Style {
 	case "C":
 		return m.styles.PriorityC
 	case "D", "E", "F":
-		return m.styles.PriorityHigh
-	case "G", "H", "I", "J", "K", "L", "M":
-		return m.styles.PriorityMedium
-	default: // N-Z
 		return m.styles.PriorityLow
+	default:
+		return m.styles.PriorityUndefined
 	}
 }
 
@@ -990,7 +1026,7 @@ func (m Model) View() string {
 		help = "Confirm: d/x/enter=delete • esc=cancel"
 	} else if m.waitingLeader {
 		// Special help when waiting for leader command
-		help = "Leader: e=edit • a/n=add • d/x=delete • esc=cancel"
+		help = "Leader: e=edit • a/n=add • d/x=delete • s=sort • esc=cancel"
 	} else {
 		switch m.mode {
 		case ModeNormal:
@@ -998,7 +1034,7 @@ func (m Model) View() string {
 		case ModeInsert:
 			help = "enter: save changes • esc: cancel"
 		case ModeCommand:
-			help = "add <task> • edit <new text> • done • delete/del • archive • tab//: autocomplete • enter: execute • esc: cancel"
+			help = "add <task> • edit <new text> • done • delete/del • archive • sort • tab//: autocomplete • enter: execute • esc: cancel"
 		case ModeVisual:
 			help = "esc: back to normal mode"
 		}

@@ -290,3 +290,85 @@ func TestGroupTodosByContext_PrioritySorting(t *testing.T) {
 		}
 	}
 }
+
+func TestSortTodosByPriority_CompletionStatus(t *testing.T) {
+	tests := []struct {
+		name              string
+		todos             []TodoWithIndex
+		expectedCompleted []bool     // Expected completion status in order
+		expectedPriority  []string   // Expected priority in order
+	}{
+		{
+			name: "uncompleted tasks come before completed tasks",
+			todos: []TodoWithIndex{
+				{Item: todo.Item{Priority: "A", Description: "Completed A", Completed: true}},
+				{Item: todo.Item{Priority: "B", Description: "Uncompleted B", Completed: false}},
+				{Item: todo.Item{Priority: "C", Description: "Uncompleted C", Completed: false}},
+			},
+			expectedCompleted: []bool{false, false, true},
+			expectedPriority:  []string{"B", "C", "A"},
+		},
+		{
+			name: "completed tasks sorted by priority within their group",
+			todos: []TodoWithIndex{
+				{Item: todo.Item{Priority: "C", Description: "Completed C", Completed: true}},
+				{Item: todo.Item{Priority: "A", Description: "Completed A", Completed: true}},
+				{Item: todo.Item{Priority: "B", Description: "Completed B", Completed: true}},
+			},
+			expectedCompleted: []bool{true, true, true},
+			expectedPriority:  []string{"A", "B", "C"},
+		},
+		{
+			name: "uncompleted tasks sorted by priority within their group",
+			todos: []TodoWithIndex{
+				{Item: todo.Item{Priority: "C", Description: "Uncompleted C", Completed: false}},
+				{Item: todo.Item{Priority: "A", Description: "Uncompleted A", Completed: false}},
+				{Item: todo.Item{Priority: "B", Description: "Uncompleted B", Completed: false}},
+			},
+			expectedCompleted: []bool{false, false, false},
+			expectedPriority:  []string{"A", "B", "C"},
+		},
+		{
+			name: "mixed priorities with mixed completion status",
+			todos: []TodoWithIndex{
+				{Item: todo.Item{Priority: "C", Description: "Completed C", Completed: true}},
+				{Item: todo.Item{Priority: "A", Description: "Uncompleted A", Completed: false}},
+				{Item: todo.Item{Priority: "B", Description: "Completed B", Completed: true}},
+				{Item: todo.Item{Priority: "", Description: "Uncompleted no priority", Completed: false}},
+				{Item: todo.Item{Priority: "", Description: "Completed no priority", Completed: true}},
+			},
+			expectedCompleted: []bool{false, false, true, true, true},
+			expectedPriority:  []string{"A", "", "B", "C", ""},
+		},
+		{
+			name: "completed with higher priority still comes after uncompleted with lower priority",
+			todos: []TodoWithIndex{
+				{Item: todo.Item{Priority: "A", Description: "Completed A", Completed: true}},
+				{Item: todo.Item{Priority: "Z", Description: "Uncompleted Z", Completed: false}},
+			},
+			expectedCompleted: []bool{false, true},
+			expectedPriority:  []string{"Z", "A"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sortTodosByPriority(tt.todos)
+
+			if len(tt.todos) != len(tt.expectedCompleted) {
+				t.Fatalf("Expected %d todos, got %d", len(tt.expectedCompleted), len(tt.todos))
+			}
+
+			for i := range tt.todos {
+				if tt.todos[i].Item.Completed != tt.expectedCompleted[i] {
+					t.Errorf("todos[%d].Completed = %v, want %v (description: %s)",
+						i, tt.todos[i].Item.Completed, tt.expectedCompleted[i], tt.todos[i].Item.Description)
+				}
+				if tt.todos[i].Item.Priority != tt.expectedPriority[i] {
+					t.Errorf("todos[%d].Priority = %q, want %q (description: %s)",
+						i, tt.todos[i].Item.Priority, tt.expectedPriority[i], tt.todos[i].Item.Description)
+				}
+			}
+		})
+	}
+}

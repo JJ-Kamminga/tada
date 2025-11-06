@@ -69,12 +69,11 @@ type Styles struct {
 	TodoCursor    lipgloss.Style
 
 	// Priority badges
-	PriorityA      lipgloss.Style
-	PriorityB      lipgloss.Style
-	PriorityC      lipgloss.Style
-	PriorityHigh   lipgloss.Style // D-F
-	PriorityMedium lipgloss.Style // G-M
-	PriorityLow    lipgloss.Style // N-Z
+	PriorityA         lipgloss.Style
+	PriorityB         lipgloss.Style
+	PriorityC         lipgloss.Style
+	PriorityLow       lipgloss.Style
+	PriorityUndefined lipgloss.Style
 
 	// Mode indicator
 	ModeNormal  lipgloss.Style
@@ -174,19 +173,13 @@ func NewStyles(theme Theme) Styles {
 			Background(lipgloss.Color("117")). // Light blue
 			Padding(0, 1),
 
-		PriorityHigh: lipgloss.NewStyle().
+		PriorityLow: lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("255")).
-			Background(lipgloss.Color("244")). // Grey (for D-F)
+			Background(lipgloss.Color("244")). // Grey
 			Padding(0, 1),
 
-		PriorityMedium: lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("0")).
-			Background(lipgloss.Color("39")). // Blue
-			Padding(0, 1),
-
-		PriorityLow: lipgloss.NewStyle().
+		PriorityUndefined: lipgloss.NewStyle().
 			Foreground(theme.Muted).
 			Padding(0, 1),
 

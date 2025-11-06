@@ -1,8 +1,8 @@
 # tada
 
-A vim-inspired terminal-based todo list manager using the todo.txt format.
+Manage a todo.txt To Do list, in your terminal, with vim-like keybinds!
 
-Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), and [Lipgloss](https://github.com/charmbracelet/lipgloss) from Charm.
+It has awesome styles thanks to [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), and [Lipgloss](https://github.com/charmbracelet/lipgloss) from Charm.
 
 ## Features
 
