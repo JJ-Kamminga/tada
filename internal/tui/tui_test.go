@@ -295,8 +295,8 @@ func TestSortTodosByPriority_CompletionStatus(t *testing.T) {
 	tests := []struct {
 		name              string
 		todos             []TodoWithIndex
-		expectedCompleted []bool     // Expected completion status in order
-		expectedPriority  []string   // Expected priority in order
+		expectedCompleted []bool   // Expected completion status in order
+		expectedPriority  []string // Expected priority in order
 	}{
 		{
 			name: "uncompleted tasks come before completed tasks",

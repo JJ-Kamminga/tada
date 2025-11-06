@@ -297,7 +297,10 @@ func (m Model) handleNormalMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "a", "n":
 			// Add new task
 			return m.leaderAdd()
-		case "d", "x":
+		case "c", "d":
+			// Complete current task
+			return m.leaderDone()
+		case "r", "x":
 			// Delete current task
 			return m.leaderDelete()
 		case "s":
@@ -414,6 +417,34 @@ func (m Model) leaderAdd() (tea.Model, tea.Cmd) {
 	m.commandInput.SetValue("add ")
 	m.commandInput.Focus()
 	return m, textinput.Blink
+}
+
+// leaderDone marks the current task as complete
+func (m Model) leaderDone() (tea.Model, tea.Cmd) {
+	// Get current todo
+	_, idx := m.getCurrentTodo()
+	if idx == -1 {
+		return m, nil
+	}
+
+	// Mark as completed
+	m.todos[idx].Completed = true
+
+	// Update raw string to include 'x' marker
+	raw := m.todos[idx].Raw
+	if !strings.HasPrefix(raw, "x ") {
+		m.todos[idx].Raw = "x " + raw
+	}
+
+	// Save to file
+	if err := todo.SaveToFile(m.filename, m.todos); err != nil {
+		return m, nil
+	}
+
+	// Refresh context lists (which triggers sorting)
+	m.refreshContextLists()
+
+	return m, nil
 }
 
 // leaderDelete enters delete confirmation mode
@@ -1026,11 +1057,13 @@ func (m Model) View() string {
 		help = "Confirm: d/x/enter=delete • esc=cancel"
 	} else if m.waitingLeader {
 		// Special help when waiting for leader command
-		help = "Leader: e=edit • a/n=add • d/x=delete • s=sort • esc=cancel"
+		help = "Leader: e=edit • a/n=add • c/d=complete • r/x=delete • s=sort • esc=cancel"
 	} else {
 		switch m.mode {
 		case ModeNormal:
-			help = "Space: leader key • i/enter: edit todo • :: command • j/k: up/down • h/l: prev/next list • q: quit"
+			help = "Hotkeys: <Space> = Leader\n" +
+				"Modes: i/enter = Insert • : = Command • v = Visual • <Esc> = Back to Normal\n" +
+				"Navigation: j/k=up/down • h/l=prev/next list • q=quit"
 		case ModeInsert:
 			help = "enter: save changes • esc: cancel"
 		case ModeCommand:
