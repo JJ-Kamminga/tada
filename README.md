@@ -2,56 +2,27 @@
 
 Manage a todo.txt To Do list, in your terminal, with vim-like keybinds!
 
+The app follows the [todo.txt standard](https://github.com/todotxt/todo.txt). `todo.txt` is a text file, you can edit it with any text editor. Changes are reflected when you restart `tada`.
+
 It has awesome styles thanks to [Bubble Tea](https://github.com/charmbracelet/bubbletea), [Bubbles](https://github.com/charmbracelet/bubbles), and [Lipgloss](https://github.com/charmbracelet/lipgloss) from Charm.
 
-## Features
+This is my personal pet project, but I did give it a license, see the paragraph License at the bottom. I am not planning to accept feature requests, though bug reports and PR's for those are welcome.
 
-- Interactive TUI with vim-inspired keybindings
-- Todo.txt format support with automatic parsing and saving
-- **Context-based organization** - todos automatically grouped by `@context` tags
-- **Priority system** - color-coded visual badges for priorities (A-Z)
-- **Archiving** - automatically archive completed todos older than 5 days
-- **Multiple modes** - Normal, Insert, Command, and Visual modes
-- **Leader key** (`Space`) for quick access to common commands
-- Beautiful styling with color-coded priority badges and mode indicators
-- Safe deletion with confirmation prompts
+## Installation from source
 
-## Installation
+This is the only way to install tada.
 
 ### Prerequisites
 
 - Go 1.21 or higher ([install Go](https://go.dev/doc/install))
 - Git
 
-### Quick Start
+### Steps
 
-1. **Clone the repository:**
-
-   ```bash
-   git clone <repository-url>
-   cd tada
-   ```
-
-2. **Run the install script:**
-
-   ```bash
-   ./install.sh
-   ```
-
-   The script will:
-   - Install dependencies
-   - Build the application
-   - Optionally install `tada` to your PATH
-
-3. **Configure your todo directory:**
-
-   ```bash
-   tada config set dir ~/.tada
-   ```
-
-   This sets the directory where your `todo.txt` and archive files will be stored.
-
-4. **Start using tada:**
+1. Git clone this repository.
+2. Run the install script `install.sh`.
+3. Configure your todo directory: `tada config set dir ~/.tada`
+4. Start using tada:
 
    ```bash
    tada    # If installed to PATH
@@ -87,117 +58,9 @@ All files (todo.txt and archives) are stored in the configured directory.
 
 ## Usage & Keybindings
 
-### Vim-Inspired Modes
+All keybinds are displayed in the app.
 
-- **Normal mode** (default) - Navigate and view todos
-- **Insert mode** (`i` or `Enter`) - Edit the selected todo
-- **Command mode** (`:`) - Execute commands
-- **Visual mode** (`v`) - Selection mode (ready for future operations)
-
-Press `Esc` to return to Normal mode from any other mode.
-
-### Normal Mode Keybindings
-
-**Navigation:**
-
-- `j/k` or `↑/↓` - Navigate todos (within and across context lists)
-- `h/l` or `←/→` - Switch between context lists
-- `q` or `Ctrl+C` - Quit
-
-**Mode switching:**
-
-- `i` or `Enter` - Enter Insert mode (edit selected todo)
-- `:` - Enter Command mode
-- `v` - Enter Visual mode
-
-**Leader key** (`Space` + ...):
-
-- `e` - Edit current task
-- `a` or `n` - Add new task
-- `d` or `x` - Delete current task (with confirmation)
-
-### Command Mode
-
-Type `:` to enter command mode, then use these commands:
-
-- `:add <description>` - Add a new task
-- `:edit <new description>` - Edit the selected task
-- `:done` - Mark the selected task as complete
-- `:delete` or `:del` - Delete the selected task (with confirmation)
-- `:archive` - Archive completed todos older than 5 days
-- `Esc` - Cancel and return to Normal mode
-
-### Common Workflows
-
-**Adding a task (quick method):**
-
-1. Press `Space` then `a`
-2. Type your task: `Buy groceries @Personal`
-3. Press `Enter`
-
-**Adding a prioritized task:**
-
-1. Press `:`
-2. Type: `add (A) Fix critical bug @Work`
-3. Press `Enter` - task appears with red (A) badge at the top
-
-**Editing a task:**
-
-1. Navigate to task with `j/k`
-2. Press `i` or `Enter`
-3. Edit the prefilled text
-4. Press `Enter` to save
-
-**Deleting a task:**
-
-1. Navigate to task with `j/k`
-2. Press `Space` then `d`
-3. Confirm with `d`, `x`, or `Enter` (or `Esc` to cancel)
-
-**Marking as complete:**
-
-1. Navigate to task with `j/k`
-2. Press `:`
-3. Type `done`
-4. Press `Enter`
-
-**Archiving old completed tasks:**
-
-1. Press `:`
-2. Type `archive`
-3. Press `Enter`
-
-All changes are automatically saved to `todo.txt` in your configured directory.
-
-## Context-Based Organization
-
-Todos are automatically grouped by their `@context` tags:
-
-- Add contexts: `Buy milk @Personal` or `Review PR @Work`
-- Multiple contexts: `Call dentist @Personal @Health` (appears in both lists)
-- No context: Todos without `@context` go to "No Context" list
-- Contexts are sorted alphabetically
-- Navigate between contexts with `h/l` keys
-- Navigate within contexts with `j/k` keys
-
-## Priority System
-
-Following the todo.txt format, priorities are indicated by `(A)` through `(Z)`:
-
-**Visual indicators:**
-
-- **(A)** - Red background (urgent)
-- **(B)** - Orange background (high priority)
-- **(C)** - Yellow background (medium-high priority)
-- **(D-F)** - Orange text (high)
-- **(G-M)** - Blue text (medium)
-- **(N-Z)** - Gray text (low)
-- No indicator for unprioritized tasks
-
-**Behavior:**
-
-- Todos are automatically sorted by priority within each context (A → Z, then unprioritized)
-- Priority must be at the start of the task description: `(A) Fix bug @Work`
+All commands can be viewed from command mode by typing `/`.
 
 ## Archiving
 
@@ -210,7 +73,7 @@ Completed todos older than 5 days can be archived:
 
 ## Todo.txt Format
 
-The app follows the [todo.txt standard](https://github.com/todotxt/todo.txt). Example:
+ Example:
 
 ```tada
 x 2025-09-25 2025-09-24 Review blog post @Work
@@ -228,7 +91,6 @@ x 2025-09-25 2025-09-24 Review blog post @Work
 - `@Context` = context tags (used for grouping)
 - `+Project` = project tags
 
-You can edit `todo.txt` directly with any text editor. Changes are reflected when you restart `tada`.
 
 ## Theming
 
@@ -245,25 +107,7 @@ The app features a beautiful default color scheme:
 
 ## Development
 
-### Project Structure
-
-```bash
-tada/
-├── cmd/
-│   ├── root.go          # Main command
-│   └── config.go        # Config commands
-├── internal/
-│   ├── config/
-│   │   └── config.go    # Configuration management
-│   ├── todo/
-│   │   └── todo.go      # Todo.txt parser and archiving
-│   └── tui/
-│       ├── model.go     # Bubble Tea TUI model
-│       └── theme.go     # Color scheme and styling
-├── main.go              # Entry point
-└── hooks/
-    └── install.sh       # Git hooks installer
-```
+If you really really want to, you can do this.
 
 ### Setup
 
@@ -284,14 +128,6 @@ make install-hooks
 ./hooks/install.sh
 ```
 
-The pre-commit hook runs:
-
-1. Code formatting checks (gofmt)
-2. Linting (golangci-lint or go vet)
-3. Tests (go test)
-
-To skip the hook: `git commit --no-verify`
-
 ### Make Commands
 
 ```bash
@@ -307,27 +143,8 @@ make uninstall-hooks       # Uninstall git hooks
 make clean                 # Remove build artifacts
 ```
 
-### Testing
+## License
 
-```bash
-# Run all tests
-go test ./...
+This project is licensed under the Mozilla Public License Version 2.0, which included in the file LICENSE.md.
 
-# Run with coverage
-go test ./... -cover
-
-# Run specific package
-go test ./internal/todo -v
-
-## Building from Source
-
-```bash
-# Build the binary
-go build -o tada
-
-# Run locally
-./tada
-
-# Or use the built-in alias
-./td
-```
+In simpler terms: the code is open source, but this is my project, and I reserve the right to use the name 'tada'.
