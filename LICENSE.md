@@ -2,6 +2,7 @@ Mozilla Public License Version 2.0
 ==================================
 
 1. Definitions
+
 --------------
 
 1.1. "Contributor"
@@ -83,8 +84,10 @@ Mozilla Public License Version 2.0
     fifty percent (50%) of the outstanding shares or beneficial
     ownership of such entity.
 
-2. License Grants and Conditions
+1. License Grants and Conditions
+
 --------------------------------
+
 
 2.1. Grants
 
@@ -154,7 +157,7 @@ equivalents.
 Sections 3.1, 3.2, 3.3, and 3.4 are conditions of the licenses granted
 in Section 2.1.
 
-3. Responsibilities
+1. Responsibilities
 -------------------
 
 3.1. Distribution of Source Form
