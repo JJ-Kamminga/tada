@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"tada/internal/todo"
+	"time"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -430,10 +431,14 @@ func (m Model) leaderDone() (tea.Model, tea.Cmd) {
 	// Mark as completed
 	m.todos[idx].Completed = true
 
-	// Update raw string to include 'x' marker
+	// Set completion date
+	completionDate := time.Now().Format("2006-01-02")
+	m.todos[idx].CompletionDate = completionDate
+
+	// Update raw string to include 'x' marker and completion date
 	raw := m.todos[idx].Raw
 	if !strings.HasPrefix(raw, "x ") {
-		m.todos[idx].Raw = "x " + raw
+		m.todos[idx].Raw = "x " + completionDate + " " + raw
 	}
 
 	// Save to file
@@ -647,10 +652,14 @@ func (m Model) cmdDone(args string) (Model, tea.Cmd) {
 	// Mark as completed
 	m.todos[idx].Completed = true
 
-	// Update raw string to include 'x' marker
+	// Set completion date
+	completionDate := time.Now().Format("2006-01-02")
+	m.todos[idx].CompletionDate = completionDate
+
+	// Update raw string to include 'x' marker and completion date
 	raw := m.todos[idx].Raw
 	if !strings.HasPrefix(raw, "x ") {
-		m.todos[idx].Raw = "x " + raw
+		m.todos[idx].Raw = "x " + completionDate + " " + raw
 	}
 
 	// Save to file
