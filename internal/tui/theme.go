@@ -142,11 +142,13 @@ func NewStyles(theme Theme) Styles {
 
 		// Todo items
 		TodoNormal: lipgloss.NewStyle().
-			Foreground(theme.Foreground).
+			Foreground(lipgloss.Color("255")).
+			Background(lipgloss.Color("236")).
 			Padding(0, 1),
 
 		TodoCompleted: lipgloss.NewStyle().
-			Foreground(theme.CompletedText).
+			Foreground(lipgloss.Color("255")).
+			Background(lipgloss.Color("236")).
 			Strikethrough(true).
 			Padding(0, 1),
 
